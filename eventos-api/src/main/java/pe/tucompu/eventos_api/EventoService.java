@@ -26,6 +26,7 @@ public class EventoService {
         e.setCreadoPor(userId);
         e.setCreadoEn(LocalDateTime.now());
         e.setActualizadoEn(e.getCreadoEn());
+        e.setEstado(Evento.Estado.CREADO);
         return repo.save(e);
     }
 
@@ -92,6 +93,14 @@ public class EventoService {
                     return proveedorRepo.findAllById(ids);
                 })
                 .orElse(java.util.Collections.<Proveedor>emptyList());
+    }
+
+    public Optional<Evento> cambiarEstado(String userId, String id, Evento.Estado nuevo) {
+        return obtener(userId, id).map(ev -> {
+            ev.setEstado(nuevo);
+            ev.setActualizadoEn(LocalDateTime.now());
+            return repo.save(ev);
+        });
     }
 
 }

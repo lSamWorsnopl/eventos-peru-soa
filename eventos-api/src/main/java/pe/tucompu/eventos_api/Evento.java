@@ -10,15 +10,20 @@ import java.util.List;
 
 import java.time.LocalDateTime;
 
+import org.springframework.data.mongodb.core.index.Indexed;
+
 @Data
 @Document(collection = "eventos")
 public class Evento {
+    public enum Estado {
+        CREADO, EN_PROCESO, FINALIZADO, CANCELADO
+    }
+
     @Id
     private String id;
 
     @NotBlank
     private String nombre;
-
     private String descripcion;
 
     @NotNull
@@ -27,9 +32,13 @@ public class Evento {
 
     private String ubicacion;
 
-    // auditoría mínima
-    private String creadoPor; // userId (subject del JWT)
+    @Indexed
+    private String creadoPor;
+
     private LocalDateTime creadoEn;
     private LocalDateTime actualizadoEn;
+
     private List<String> proveedorIds;
+
+    private Estado estado; // 👈 nuevo
 }

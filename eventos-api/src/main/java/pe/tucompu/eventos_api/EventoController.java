@@ -72,4 +72,15 @@ public class EventoController {
         return ResponseEntity.ok(lista);
     }
 
+    @PatchMapping("{id}/estado")
+    public ResponseEntity<Evento> cambiarEstado(
+            @PathVariable String id,
+            @RequestParam Evento.Estado estado,
+            Authentication auth) {
+        String userId = auth.getName();
+        return service.cambiarEstado(userId, id, estado)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
 }

@@ -6,22 +6,28 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.data.mongodb.core.index.Indexed;
+
 @Data
 @Document(collection = "usuarios")
 public class Usuario {
-
     @Id
     private String id;
 
+    @Indexed(unique = true)
     private String username;
+
     private String nombre;
 
-    // ESTE campo ya no se guarda en BD (opcional si usas DTOs)
-    private transient String email;
+    @JsonIgnore
+    private transient String email; // nunca sale por API
 
-    // ESTE campo sí se guarda, pero cifrado
-    private String emailEnc;
+    @JsonIgnore
+    private String emailEnc; // cifrado en BD, no se expone
 
-    private String passwordHash;
+    @JsonIgnore
+    private String passwordHash; // jamás exponer hashes
+
     private Set<String> roles;
 }
