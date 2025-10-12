@@ -13,7 +13,7 @@ services:
 
   api:
     build:
-      context: ./eventos-api
+      context: ./backend
       dockerfile: Dockerfile
     depends_on:
       - mongo

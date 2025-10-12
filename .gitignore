@@ -1,0 +1,11 @@
+# Frontend artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.next/
+frontend/.nuxt/
+
+# OS
+.DS_Store
+Thumbs.db
+
