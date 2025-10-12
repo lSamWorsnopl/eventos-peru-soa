@@ -1,0 +1,62 @@
+_format_version: "3.0"
+
+# ==========================
+#  Declarative Kong Config
+# ==========================
+
+services:
+  # Servicio principal que representa tu API Spring Boot
+  - name: eventos-api
+    url: http://api:8081
+    routes:
+      # Ruta para endpoints de eventos
+      - name: eventos-route
+        paths:
+          - /api/eventos
+        strip_path: false
+
+      # Ruta para proveedores
+      - name: proveedores-route
+        paths:
+          - /api/proveedores
+        strip_path: false
+
+      # Ruta para autenticación (login, registro)
+      - name: auth-route
+        paths:
+          - /auth
+        strip_path: false
+
+      # Ruta para health check
+      - name: health-route
+        paths:
+          - /health
+        strip_path: false
+
+      # Ruta adicional para /api/health (según tu controlador)
+      - name: api-health-route
+        paths:
+          - /api/health
+        strip_path: false
+
+# ==========================
+#  Plugins globales
+# ==========================
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - http://localhost:5173        # tu frontend React
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Authorization
+        - Content-Type
+      credentials: true
+      max_age: 3600
