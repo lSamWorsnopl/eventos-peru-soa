@@ -28,6 +28,19 @@ public class EventoController {
         return service.listarDelUsuario(userId);
     }
 
+    // Alias para compatibilidad con el frontend actual
+    @GetMapping("/mis")
+    public java.util.List<pe.tucompu.eventos_api.dto.MisEventoDto> listarMis(Authentication auth) {
+        String userId = auth.getName();
+        return service.listarDelUsuario(userId).stream()
+                .map(e -> new pe.tucompu.eventos_api.dto.MisEventoDto(
+                        e.getId(),
+                        e.getFechaHora() != null ? e.getFechaHora().toString() : null,
+                        e.getNombre(),
+                        e.getEstado() != null ? e.getEstado().name() : null))
+                .toList();
+    }
+
     @PostMapping
     public ResponseEntity<Evento> crear(@Valid @RequestBody Evento e, Authentication auth) {
         String userId = auth.getName();
