@@ -32,11 +32,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String token = null;
         if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring(7);
+            token = header.substring(7);
+        } else if (request.getCookies() != null) {
+            for (var c : request.getCookies()) {
+                if ("ACCESS_TOKEN".equals(c.getName())) {
+                    token = c.getValue();
+                    break;
+                }
+            }
+        }
+        if (token != null && !token.isBlank()) {
             try {
                 Jws<Claims> jws = jwt.parse(token);
                 String userId = jws.getBody().getSubject();
+                String username = null;
+                try { username = jws.getBody().get("username", String.class); } catch (Exception ignore) {}
                 Object rolesObj = jws.getBody().get("roles");
                 Collection<SimpleGrantedAuthority> authorities = List.of();
 
@@ -47,7 +59,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             .collect(Collectors.toList());
                 }
 
-                var auth = new UsernamePasswordAuthenticationToken(userId, null, authorities);
+                var auth = new UsernamePasswordAuthenticationToken(
+                        userId,
+                        null,
+                        authorities);
+                if (username != null && !username.isBlank()) {
+                    auth.setDetails(java.util.Map.of("username", username));
+                }
                 SecurityContextHolder.getContext().setAuthentication(auth);
                 System.out.println(">>> JwtAuthFilter header = " + request.getHeader("Authorization"));
                 System.out.println(

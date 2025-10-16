@@ -65,4 +65,16 @@ public class UsuarioService {
         repo.deleteById(id);
         return true;
     }
+
+    public boolean changePasswordForUsername(String username, String currentPassword, String newPassword) {
+        var opt = repo.findByUsername(username);
+        if (opt.isEmpty()) return false;
+        var user = opt.get();
+        if (!encoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("current_password_incorrect");
+        }
+        user.setPasswordHash(encoder.encode(newPassword));
+        repo.save(user);
+        return true;
+    }
 }

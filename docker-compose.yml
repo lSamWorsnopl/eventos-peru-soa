@@ -29,6 +29,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-me}
       JWT_EXP_MIN: ${JWT_EXP_MIN:-15}
       APP_DATA_KEY: ${APP_DATA_KEY:-0123456789ABCDEF0123456789ABCDEF}
+      INIT_ADMIN_PASSWORD: ${INIT_ADMIN_PASSWORD:-}
     networks:
       - soa_net
 

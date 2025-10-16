@@ -41,6 +41,24 @@ export default function MisEventos() {
   const [q, setQ] = useState('');
   const [fEstado, setFEstado] = useState<Estado | 'ALL'>('ALL');
 
+  // Datos para asignación de proveedores en el modal
+  type Proveedor = { id: string; nombre: string };
+  async function fetchAsignados(id: string): Promise<Proveedor[]> { const { data } = await api.get(`/api/eventos/${id}/proveedores`); return data; }
+  async function fetchProveedores(): Promise<Proveedor[]> { const { data } = await api.get('/api/proveedores'); return data; }
+  const { data: asignados, refetch: refetchAsignados } = useQuery({ queryKey: ['evento-proveedores', detailId], queryFn: () => fetchAsignados(detailId as string), enabled: !!detailId });
+  const { data: proveedores } = useQuery({ queryKey: ['proveedores-all'], queryFn: fetchProveedores });
+  const [nuevoProv, setNuevoProv] = useState('');
+  const assignMut = useMutation({
+    mutationFn: async (provId: string) => { if (!detailId) return; await api.post(`/api/eventos/${detailId}/proveedores/${provId}`); },
+    onSuccess: () => { setNuevoProv(''); refetchAsignados(); },
+    onError: (e: any) => setErrMsg(e?.response?.data?.message || 'No se pudo asignar proveedor'),
+  });
+  const unassignMut = useMutation({
+    mutationFn: async (provId: string) => { if (!detailId) return; await api.delete(`/api/eventos/${detailId}/proveedores/${provId}`); },
+    onSuccess: () => { refetchAsignados(); },
+    onError: (e: any) => setErrMsg(e?.response?.data?.message || 'No se pudo quitar proveedor'),
+  });
+
   const createMut = useMutation({
     mutationFn: createEvento,
     onSuccess: () => {
@@ -239,7 +257,7 @@ export default function MisEventos() {
             <Skeleton className="h-6" />
           </div>
         ) : (
-          <div className="space-y-2 text-sm">
+          <div className="space-y-4 text-sm">
             <p className="opacity-80">{detalle.descripcion || 'Sin descripción'}</p>
             <div className="flex flex-wrap gap-4">
               <span><strong>Fecha:</strong> {detalle.fechaHora ? new Date(detalle.fechaHora).toLocaleString() : '-'}</span>
@@ -248,6 +266,28 @@ export default function MisEventos() {
             </div>
             <div className="pt-2">
               <a className="text-brand-primary underline" href={`/eventos/${detalle.id}`}>Abrir en página completa</a>
+            </div>
+
+            <div className="border-t pt-3">
+              <div className="p-0 flex items-center justify-between">
+                <h4 className="font-medium">Proveedores asignados</h4>
+                <div className="flex items-center gap-2">
+                  <select className="border rounded px-2 py-1 text-sm" value={nuevoProv} onChange={(e) => setNuevoProv(e.target.value)}>
+                    <option value="">Selecciona proveedor…</option>
+                    {(proveedores || []).map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                  </select>
+                  <button disabled={!nuevoProv || assignMut.isPending} onClick={() => assignMut.mutate(nuevoProv)} className="px-3 py-1 border rounded">Asignar</button>
+                </div>
+              </div>
+              <ul className="divide-y mt-2">
+                {(asignados || []).map(p => (
+                  <li key={p.id} className="py-2 flex items-center justify-between">
+                    <span>{p.nombre}</span>
+                    <button onClick={() => unassignMut.mutate(p.id)} className="px-2 py-1 border rounded text-red-700">Quitar</button>
+                  </li>
+                ))}
+                {(!asignados || asignados.length === 0) && <li className="py-2 text-gray-500">Sin proveedores</li>}
+              </ul>
             </div>
           </div>
         )}

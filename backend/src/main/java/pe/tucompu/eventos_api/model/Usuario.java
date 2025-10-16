@@ -21,14 +21,13 @@ public class Usuario {
     private String nombre;
 
     @JsonIgnore
-    private transient String email; // nunca sale por API
+    private transient String email;
 
     @JsonIgnore
-    private String emailEnc; // cifrado en BD, no se expone
+    private String emailEnc;
 
     @JsonIgnore
-    private String passwordHash; // jamás exponer hashes
+    private String passwordHash;
 
     private Set<String> roles;
 }
-

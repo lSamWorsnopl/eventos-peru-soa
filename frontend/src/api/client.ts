@@ -5,6 +5,7 @@ const baseURL = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE_URL;
 const api = axios.create({
   baseURL,
   timeout: 10000,
+  withCredentials: true,
 });
 
 if (import.meta.env.DEV && import.meta.env.VITE_API_BASE_URL) {
@@ -12,21 +13,18 @@ if (import.meta.env.DEV && import.meta.env.VITE_API_BASE_URL) {
   console.warn('[api] Ignorando VITE_API_BASE_URL en desarrollo; usando proxy de Vite.');
 }
 
-// Interceptor para agregar el token a cada request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// No agregamos Authorization; usamos cookie HttpOnly gestionada por el backend
 
 // Manejo global de respuestas 401
 api.interceptors.response.use(
   (r) => r,
   (err) => {
     if (err?.response?.status === 401) {
-      localStorage.removeItem('token');
       localStorage.removeItem('user');
-      location.href = '/login';
+      // Evitar bucle de recarga: no redirigir si ya estamos en /login
+      if (typeof window !== 'undefined' && window.location?.pathname !== '/login') {
+        window.location.assign('/login');
+      }
     }
     return Promise.reject(err);
   }

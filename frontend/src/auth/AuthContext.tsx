@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+﻿import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import api from '../api/client';
 
 type Role = 'CLIENTE' | 'PROVEEDOR' | 'ADMIN';
@@ -17,55 +17,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       return JSON.parse(raw) as User;
     } catch {
-      // Sanitize corrupted value to prevent boot-time crashes
       localStorage.removeItem('user');
       return null;
     }
   });
 
-  async function login(username: string, password: string) {
-    const { data, headers } = await api.post('/auth/login', { username, password });
-    const token: string | undefined =
-      (data && (data.accessToken || data.token || data.jwt)) ||
-      (typeof headers?.authorization === 'string'
-        ? headers.authorization.replace(/^Bearer\s+/i, '')
-        : undefined);
-
-    if (!token) {
-      throw new Error('Respuesta de login inválida');
-    }
-
-    // Derivar el usuario desde el JWT (payload con sub, username, roles)
-    function decodeJwtPayload<T = any>(jwt: string): T | null {
+  // Rehidratar sesión desde cookie al montar
+  useEffect(() => {
+    (async () => {
       try {
-        const payload = jwt.split('.')[1];
-        const norm = payload.replace(/-/g, '+').replace(/_/g, '/');
-        const json = decodeURIComponent(
-          atob(norm)
-            .split('')
-            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-            .join('')
-        );
-        return JSON.parse(json) as T;
+        const { data: me } = await api.get('/api/me');
+        if (me?.authenticated) {
+          const authorities: string[] = me.authorities || [];
+          const derivedUser: User = {
+            id: me.principal || 'unknown',
+            username: (me.username || me.principal) || 'unknown',
+            role: authorities.includes('ROLE_ADMIN') ? 'ADMIN' : 'CLIENTE',
+          };
+          setUser(derivedUser);
+          localStorage.setItem('user', JSON.stringify(derivedUser));
+        }
       } catch {
-        return null;
+        // ignore
       }
-    }
+    })();
+  }, []);
 
-    const claims = decodeJwtPayload<{ sub?: string; username?: string; roles?: string[] }>(token) || {};
+  async function login(username: string, password: string) {
+    await api.post('/auth/login', { username, password });
+    const { data: me } = await api.get('/api/me');
+    if (!me?.authenticated) throw new Error('Login sin sesión');
+    const authorities: string[] = me.authorities || [];
     const derivedUser: User = {
-      id: claims.sub || 'unknown',
-      username: claims.username || username,
-      role: (claims.roles || []).includes('ADMIN') ? 'ADMIN' : 'CLIENTE',
+      id: me.principal || 'unknown',
+      username: (me.username || username),
+      role: authorities.includes('ROLE_ADMIN') ? 'ADMIN' : 'CLIENTE',
     };
-
-    localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(derivedUser));
     setUser(derivedUser);
   }
 
-  function logout() {
-    localStorage.removeItem('token');
+  async function logout() {
+    try { await api.post('/auth/logout'); } catch {}
     localStorage.removeItem('user');
     setUser(null);
   }

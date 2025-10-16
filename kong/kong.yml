@@ -39,6 +39,29 @@ services:
           - /api/health
         strip_path: false
 
+      # Ruta para usuarios (GET/POST /api/users, etc.)
+      - name: users-route
+        paths:
+          - /api/users
+        strip_path: false
+
+      # Ruta para endpoint de sesión actual
+      - name: me-route
+        paths:
+          - /api/me
+        strip_path: false
+
+      # Rutas para exponer Swagger UI y OpenAPI a través de Kong
+      - name: swagger-ui-route
+        paths:
+          - /swagger-ui
+        strip_path: false
+
+      - name: openapi-docs-route
+        paths:
+          - /v3/api-docs
+        strip_path: false
+
 # ==========================
 #  Plugins globales
 # ==========================
@@ -47,7 +70,8 @@ plugins:
   - name: cors
     config:
       origins:
-        - http://localhost:5173        # tu frontend React
+        - http://localhost:5173        # Vite dev
+        - http://localhost:4173        # Vite preview / build local
       methods:
         - GET
         - POST
