@@ -21,12 +21,28 @@ export default function LoginPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+    // Validaciones en cliente cuando se registra
+    if (isRegister) {
+      const emailRe = /^[^@\n\r]+@[^@\n\r]+\.[^@\n\r]+$/;
+      if (!emailRe.test(email.trim())) {
+        setErr('Email inválido');
+        return;
+      }
+      const strong = p.length >= 8 && /[A-Z]/.test(p) && /[a-z]/.test(p) && /[0-9]/.test(p) && /[^A-Za-z0-9]/.test(p);
+      if (!strong) {
+        setErr('La contraseña debe tener al menos 8 caracteres, con mayúscula, minúscula, número y símbolo');
+        return;
+      }
+    }
     setL(true);
     try {
       if (isRegister) {
-        await api.post('/auth/signup', { username: u, password: p, nombre, email });
-        await login(u, p);
-        nav('/');
+        const r = await api.post('/auth/signup', { username: u, password: p, nombre, email });
+        // El backend ahora devuelve 202 y no permite login hasta verificar correo
+        const msg = (r.data?.message as string) || 'Cuenta creada. Verifica tu correo.';
+        setErr(msg + (r.data?.devVerifyToken ? ` (DEV token: ${r.data.devVerifyToken})` : ''));
+        setIsRegister(false);
+        return;
       } else {
         await login(u, p);
         nav('/');
@@ -35,6 +51,9 @@ export default function LoginPage() {
       const ax = error as AxiosError<ApiError>;
       const status = ax.response?.status;
       let message = ax.response?.data?.message || ax.response?.data?.error || (ax as any)?.message || 'Operación fallida';
+      if (status === 403 && /no verificado/i.test(String(message))) {
+        message = 'Debes verificar tu correo antes de iniciar sesión.';
+      }
       if (!isRegister && (status === 401 || /credenciales/i.test(String(message)))) {
         message = 'Usuario o contraseña incorrectos';
       }
@@ -148,4 +167,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

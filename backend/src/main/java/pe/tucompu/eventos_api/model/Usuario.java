@@ -1,6 +1,7 @@
 package pe.tucompu.eventos_api.model;
 
 import lombok.Data;
+import java.time.LocalDateTime;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -30,4 +31,13 @@ public class Usuario {
     private String passwordHash;
 
     private Set<String> roles;
+
+    // Estado de verificación de correo
+    private boolean emailVerified;
+
+    @JsonIgnore
+    private String emailVerifToken;
+
+    @JsonIgnore
+    private LocalDateTime emailVerifExpiresAt;
 }
