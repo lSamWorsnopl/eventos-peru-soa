@@ -46,7 +46,7 @@ export default function AdminLayout() {
           </button>
         </div>
         <nav className="p-3 space-y-1 text-sm">
-          <Item to="/" icon="calendar" label="Eventos" open={open} />
+          <Item to="/dashboard" icon="calendar" label="Eventos" open={open} />
           <Item to="/proveedores" icon="store" label="Proveedores" open={open} />
           {user?.role === 'ADMIN' && <Item to="/usuarios" icon="users" label="Usuarios" open={open} />}
         </nav>

@@ -45,7 +45,7 @@ export default function LoginPage() {
         return;
       } else {
         await login(u, p);
-        nav('/');
+        nav('/dashboard');
       }
     } catch (error: unknown) {
       const ax = error as AxiosError<ApiError>;
@@ -66,7 +66,7 @@ export default function LoginPage() {
     }
   }
 
-  if (user) nav('/');
+  if (user) nav('/dashboard');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-sky-50 flex">

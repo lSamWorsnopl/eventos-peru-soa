@@ -1,13 +1,22 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 
-export default function BrandLogo({ className = 'h-8 w-8' }: { className?: string }) {
-  const [src, setSrc] = useState('/brand/eventos-peru-logo.png');
+type Props = {
+  className?: string;
+  src?: string;
+  alt?: string;
+  fallbackSvg?: string;
+};
+
+export default function BrandLogo({ className = 'h-8 w-8', src: initialSrc, alt = 'Eventos Peru', fallbackSvg }: Props) {
+  const defaultPng = '/brand/eventos-peru-logo.png';
+  const defaultSvg = fallbackSvg || '/brand/eventos-peru-logo.svg';
+  const [src, setSrc] = useState(initialSrc || defaultPng);
   if (!src) return null;
   return (
     <img
       src={src}
-      onError={() => setSrc(src.endsWith('.png') ? '/brand/eventos-peru-logo.svg' : '')}
-      alt="Eventos Perú"
+      onError={() => setSrc(src.endsWith('.png') ? defaultSvg : '')}
+      alt={alt}
       className={className + ' object-contain'}
     />
   );

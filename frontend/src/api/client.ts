@@ -20,6 +20,11 @@ api.interceptors.response.use(
   (r) => r,
   (err) => {
     if (err?.response?.status === 401) {
+      const cfg = err?.config as any;
+      // Permite a ciertas peticiones optar por NO redirigir (p.ej. chequeo anónimo de sesión /api/me)
+      if (cfg?.skipAuthRedirect) {
+        return Promise.reject(err);
+      }
       localStorage.removeItem('user');
       // Evitar bucle de recarga: no redirigir si ya estamos en /login
       if (typeof window !== 'undefined' && window.location?.pathname !== '/login') {

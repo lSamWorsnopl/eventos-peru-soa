@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const { data: me } = await api.get('/api/me');
+        const { data: me } = await api.get('/api/me', { skipAuthRedirect: true } as any);
         if (me?.authenticated) {
           const authorities: string[] = me.authorities || [];
           const derivedUser: User = {
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function login(username: string, password: string) {
     await api.post('/auth/login', { username, password });
-    const { data: me } = await api.get('/api/me');
+    const { data: me } = await api.get('/api/me', { skipAuthRedirect: true } as any);
     if (!me?.authenticated) throw new Error('Login sin sesión');
     const authorities: string[] = me.authorities || [];
     const derivedUser: User = {
