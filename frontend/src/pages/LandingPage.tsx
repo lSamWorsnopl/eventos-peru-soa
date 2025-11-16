@@ -1,33 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import BrandLogo from '../components/BrandLogo';
-
-function PublicNavbar({ active }: { active: string }) {
-  return (
-    <header className="w-full border-b sticky top-0 z-40 bg-white/85 backdrop-blur">
-      <div className="grid grid-cols-3 items-center max-w-6xl mx-auto px-8 h-20">
-        {/* Izquierda: enlaces justificados hacia el centro */}
-        <nav className="hidden md:flex items-center gap-8 justify-end text-base whitespace-nowrap font-mont uppercase tracking-wide">
-          <a href="#inicio" className={`pb-0.5 transition-all ${active==='inicio' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-800 hover:text-brand-primary link-underline-animate hover:-translate-y-0.5'}`}>Inicio</a>
-          <a href="#nosotros" className={`pb-0.5 transition-all ${active==='nosotros' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-800 hover:text-brand-primary link-underline-animate hover:-translate-y-0.5'}`}>Nosotros</a>
-          <a href="#servicios" className={`pb-0.5 transition-all ${active==='servicios' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-800 hover:text-brand-primary link-underline-animate hover:-translate-y-0.5'}`}>Servicios</a>
-        </nav>
-        {/* Centro: logo */}
-        <div className="justify-self-center">
-          <Link to="/" className="flex items-center">
-            <BrandLogo className="h-20 w-auto" src="/brand/home-logo.png" alt="Eventos Peru" />
-          </Link>
-        </div>
-        {/* Derecha: enlaces justificados hacia el centro */}
-        <div className="hidden md:flex items-center gap-8 justify-start text-base whitespace-nowrap font-mont uppercase tracking-wide">
-          <a href="#galeria" className={`hidden md:inline pb-0.5 transition-all ${active==='galeria' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-800 hover:text-brand-primary link-underline-animate hover:-translate-y-0.5'}`}>Galeria</a>
-          <a href="#contacto" className={`hidden md:inline pb-0.5 transition-all ${active==='contacto' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-800 hover:text-brand-primary link-underline-animate hover:-translate-y-0.5'}`}>Contacto</a>
-          <a href="#cotiza" className="hidden md:inline px-3 py-1.5 rounded-md bg-brand-primary text-white transition hover:-translate-y-0.5 hover:shadow-md">Hacer reserva</a>
-        </div>
-      </div>
-    </header>
-  );
-}
+import PublicNavbar from '../components/PublicNavbar';
 
 export default function LandingPage() {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -93,10 +65,10 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      <PublicNavbar active={active} />
+      <PublicNavbar activeSection={active} />
 
       {/* Hero / Inicio (3 en 3) */}
-      <section id="inicio" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <section id="inicio" className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-20 py-10">
         <div className="relative">
           <div className="overflow-hidden" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
             <div ref={trackRef} className="flex transition-transform duration-500 ease-out" style={{ transform: `translateX(-${page * 100}%)` }}>
@@ -139,7 +111,7 @@ export default function LandingPage() {
 
       {/* Nosotros */}
       <section id="nosotros" className="bg-gray-50 border-y">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 grid md:grid-cols-2 gap-10 items-center">
+        <div className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-20 py-16 grid md:grid-cols-2 gap-10 items-center">
           <div>
             <h2 className="text-2xl font-semibold">Nosotros</h2>
             <p className="mt-4 text-gray-600 leading-relaxed">Creamos experiencias unicas y memorables para bodas y eventos corporativos. Nuestro equipo se encarga de cada detalle: diseno, logistica, proveedores y coordinacion integral.</p>
@@ -153,7 +125,7 @@ export default function LandingPage() {
       </section>
 
       {/* Servicios */}
-      <section id="servicios" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <section id="servicios" className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-20 py-16">
         <h2 className="text-2xl font-semibold text-center">Servicios</h2>
         <p className="text-center text-gray-600 mt-2">Planeacion integral para que solo te preocupes por disfrutar.</p>
         <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -176,7 +148,7 @@ export default function LandingPage() {
 
       {/* Galeria */}
       <section id="galeria" className="bg-gray-50 border-y">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-20 py-16">
           <h2 className="text-2xl font-semibold text-center">Galeria</h2>
           <p className="text-center text-gray-600 mt-2">Algunos momentos de nuestros eventos.</p>
           <div className="mt-10 grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -188,7 +160,7 @@ export default function LandingPage() {
       </section>
 
       {/* Contacto / Cotiza */}
-      <section id="contacto" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <section id="contacto" className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-20 py-16">
         <div className="grid md:grid-cols-2 gap-10">
           <div>
             <h2 className="text-2xl font-semibold">Contacto</h2>
