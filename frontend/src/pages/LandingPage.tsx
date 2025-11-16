@@ -1,26 +1,28 @@
-﻿import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BrandLogo from '../components/BrandLogo';
 
-function PublicNavbar() {
+function PublicNavbar({ active }: { active: string }) {
   return (
-    <header className="w-full border-b bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-40">
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
-        <nav className="hidden md:flex items-center gap-6 text-sm whitespace-nowrap">
-          <a href="#inicio" className="hover:text-brand-primary">Inicio</a>
-          <a href="#nosotros" className="hover:text-brand-primary">Nosotros</a>
-          <a href="#servicios" className="hover:text-brand-primary">Servicios</a>
+    <header className="w-full border-b sticky top-0 z-40 bg-white/85 backdrop-blur">
+      <div className="grid grid-cols-3 items-center max-w-6xl mx-auto px-8 h-20">
+        {/* Izquierda: enlaces justificados hacia el centro */}
+        <nav className="hidden md:flex items-center gap-8 justify-end text-base whitespace-nowrap font-mont uppercase tracking-wide">
+          <a href="#inicio" className={`pb-0.5 transition-all ${active==='inicio' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-800 hover:text-brand-primary link-underline-animate hover:-translate-y-0.5'}`}>Inicio</a>
+          <a href="#nosotros" className={`pb-0.5 transition-all ${active==='nosotros' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-800 hover:text-brand-primary link-underline-animate hover:-translate-y-0.5'}`}>Nosotros</a>
+          <a href="#servicios" className={`pb-0.5 transition-all ${active==='servicios' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-800 hover:text-brand-primary link-underline-animate hover:-translate-y-0.5'}`}>Servicios</a>
         </nav>
-        <div className="absolute inset-x-0 flex justify-center">
+        {/* Centro: logo */}
+        <div className="justify-self-center">
           <Link to="/" className="flex items-center">
-            <BrandLogo className="h-14 w-14" src="/brand/home-logo.png" alt="Eventos Peru" />
+            <BrandLogo className="h-20 w-auto" src="/brand/home-logo.png" alt="Eventos Peru" />
           </Link>
         </div>
-        <div className="ml-auto flex items-center gap-6 text-sm whitespace-nowrap">
-          <a href="#galeria" className="hidden md:inline hover:text-brand-primary">Galería</a>
-          <a href="#contacto" className="hidden md:inline hover:text-brand-primary">Contacto</a>
-          <a href="#cotiza" className="hidden md:inline px-3 py-1.5 rounded-md bg-brand-primary text-white">Hacer reserva</a>
-          <Link to="/login" className="md:hidden text-sm px-3 py-1.5 rounded border">Ingresar</Link>
+        {/* Derecha: enlaces justificados hacia el centro */}
+        <div className="hidden md:flex items-center gap-8 justify-start text-base whitespace-nowrap font-mont uppercase tracking-wide">
+          <a href="#galeria" className={`hidden md:inline pb-0.5 transition-all ${active==='galeria' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-800 hover:text-brand-primary link-underline-animate hover:-translate-y-0.5'}`}>Galeria</a>
+          <a href="#contacto" className={`hidden md:inline pb-0.5 transition-all ${active==='contacto' ? 'text-brand-primary border-b-2 border-brand-primary' : 'text-gray-800 hover:text-brand-primary link-underline-animate hover:-translate-y-0.5'}`}>Contacto</a>
+          <a href="#cotiza" className="hidden md:inline px-3 py-1.5 rounded-md bg-brand-primary text-white transition hover:-translate-y-0.5 hover:shadow-md">Hacer reserva</a>
         </div>
       </div>
     </header>
@@ -30,6 +32,8 @@ function PublicNavbar() {
 export default function LandingPage() {
   const trackRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [active, setActive] = useState('inicio');
 
   const images = [
     '/landing/hero-1.png',
@@ -68,30 +72,39 @@ export default function LandingPage() {
     });
   };
 
+  // autoplay con pausa en hover
+  useEffect(() => {
+    if (paused || !canSlide) return;
+    const id = setInterval(() => slide(1), 5000);
+    return () => clearInterval(id);
+  }, [paused, page, canSlide]);
+
+  // Resalte activo del navbar
+  useEffect(() => {
+    const ids = ['inicio', 'nosotros', 'servicios', 'galeria', 'contacto'];
+    const els = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    const obs = new IntersectionObserver((entries) => {
+      const visible = entries.filter(e => e.isIntersecting).sort((a,b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible?.target?.id) setActive(visible.target.id);
+    }, { rootMargin: '-30% 0px -60% 0px', threshold: [0,0.25,0.5,0.75,1] });
+    els.forEach(el => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      <PublicNavbar />
+      <PublicNavbar active={active} />
 
       {/* Hero / Inicio (3 en 3) */}
       <section id="inicio" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="relative">
-          <div className="overflow-hidden">
-            <div
-              ref={trackRef}
-              className="flex transition-transform duration-500 ease-out"
-              style={{ transform: `translateX(-${page * 100}%)` }}
-            >
+          <div className="overflow-hidden" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+            <div ref={trackRef} className="flex transition-transform duration-500 ease-out" style={{ transform: `translateX(-${page * 100}%)` }}>
               {pages.map((group, gi) => (
                 <div key={gi} className="shrink-0 grow-0 basis-full w-full">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {group.map((src, i) => (
-                      <img
-                        key={`${gi}-${i}`}
-                        src={src}
-                        alt={`Hero ${gi * 3 + i + 1}`}
-                        className="w-full h-[60vh] object-cover rounded-lg bg-gray-100"
-                        onError={onImgError}
-                      />
+                      <img key={`${gi}-${i}`} src={src} alt={`Hero ${gi * 3 + i + 1}`} className="w-full h-[60vh] object-cover rounded-lg bg-gray-100 transition-transform duration-300 hover:scale-[1.01]" onError={onImgError} />
                     ))}
                   </div>
                 </div>
@@ -101,9 +114,21 @@ export default function LandingPage() {
 
           {canSlide && (
             <>
-              <button aria-label="Anterior" onClick={() => slide(-1)} className="hidden sm:grid place-items-center absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/90 hover:bg-white shadow">‹</button>
-              <button aria-label="Siguiente" onClick={() => slide(1)} className="hidden sm:grid place-items-center absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/90 hover:bg-white shadow">›</button>
+              <button aria-label="Anterior" onClick={() => slide(-1)} className="hidden sm:grid place-items-center absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/90 ring-1 ring-black/5 hover:ring-black/10 hover:bg-white shadow transition transform hover:scale-105 active:scale-95">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <button aria-label="Siguiente" onClick={() => slide(1)} className="hidden sm:grid place-items-center absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/90 ring-1 ring-black/5 hover:ring-black/10 hover:bg-white shadow transition transform hover:scale-105 active:scale-95">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 6l6 6-6 6"/></svg>
+              </button>
             </>
+          )}
+
+          {canSlide && (
+            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+              {pages.map((_, i) => (
+                <button key={i} aria-label={`Ir a pagina ${i+1}`} onClick={() => setPage(i)} className={`h-2.5 w-2.5 rounded-full ${page===i?'bg-gray-900':'bg-gray-300'} transition`} />
+              ))}
+            </div>
           )}
         </div>
         <div className="text-center mt-8">
@@ -117,12 +142,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 grid md:grid-cols-2 gap-10 items-center">
           <div>
             <h2 className="text-2xl font-semibold">Nosotros</h2>
-            <p className="mt-4 text-gray-600 leading-relaxed">
-              Creamos experiencias únicas y memorables para bodas y eventos corporativos. Nuestro equipo se encarga de cada detalle: diseño, logística, proveedores y coordinación integral.
-            </p>
+            <p className="mt-4 text-gray-600 leading-relaxed">Creamos experiencias unicas y memorables para bodas y eventos corporativos. Nuestro equipo se encarga de cada detalle: diseno, logistica, proveedores y coordinacion integral.</p>
             <div className="mt-6 flex gap-3">
               <a href="#servicios" className="px-4 py-2 rounded-md bg-brand-primary text-white">Ver servicios</a>
-              <a href="#contacto" className="px-4 py-2 rounded-md border">Contáctanos</a>
+              <a href="#contacto" className="px-4 py-2 rounded-md border">Contactanos</a>
             </div>
           </div>
           <img src="/landing/nosotros.png" alt="Nuestro equipo" className="rounded-lg object-cover w-full h-64 md:h-80 bg-gray-100" onError={onImgError} />
@@ -132,18 +155,18 @@ export default function LandingPage() {
       {/* Servicios */}
       <section id="servicios" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <h2 className="text-2xl font-semibold text-center">Servicios</h2>
-        <p className="text-center text-gray-600 mt-2">Planeación integral para que solo te preocupes por disfrutar.</p>
+        <p className="text-center text-gray-600 mt-2">Planeacion integral para que solo te preocupes por disfrutar.</p>
         <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
-            { title: 'Bodas', desc: 'Diseño, logística y coordinación total.' },
+            { title: 'Bodas', desc: 'Diseno, logistica y coordinacion total.' },
             { title: 'Eventos corporativos', desc: 'Lanzamientos, conferencias y activaciones.' },
-            { title: 'Decoración y styling', desc: 'Ambientación, flores, iluminación y más.' },
-            { title: 'Catering y barra', desc: 'Menús personalizados y coctelería.' },
-            { title: 'Música y entretenimiento', desc: 'DJs, bandas y performances.' },
+            { title: 'Decoracion y styling', desc: 'Ambientacion, flores, iluminacion y mas.' },
+            { title: 'Catering y barra', desc: 'Menus personalizados y cocteleria.' },
+            { title: 'Musica y entretenimiento', desc: 'DJs, bandas y performances.' },
             { title: 'Destination weddings', desc: 'Bodas en playa, campo o sierra.' },
           ].map((s) => (
             <div key={s.title} className="rounded-xl border p-6 hover:shadow-sm">
-              <div className="h-12 w-12 rounded bg-brand-primary/10 text-brand-primary grid place-items-center text-lg font-bold">â˜…</div>
+              <div className="h-12 w-12 rounded bg-brand-primary/10 text-brand-primary grid place-items-center text-lg font-bold">★</div>
               <h3 className="mt-4 font-semibold">{s.title}</h3>
               <p className="text-gray-600 mt-1 text-sm">{s.desc}</p>
             </div>
@@ -151,14 +174,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Galería */}
+      {/* Galeria */}
       <section id="galeria" className="bg-gray-50 border-y">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <h2 className="text-2xl font-semibold text-center">Galería</h2>
+          <h2 className="text-2xl font-semibold text-center">Galeria</h2>
           <p className="text-center text-gray-600 mt-2">Algunos momentos de nuestros eventos.</p>
           <div className="mt-10 grid grid-cols-2 md:grid-cols-3 gap-4">
             {[1,2,3,4,5,6].map((i) => (
-              <img key={i} src={`/landing/galeria-${i}.png`} alt={`Galería ${i}`} className="w-full h-48 object-cover rounded-lg bg-gray-100" onError={onImgError} />
+              <img key={i} src={`/landing/galeria-${i}.png`} alt={`Galeria ${i}`} className="w-full h-48 object-cover rounded-lg bg-gray-100" onError={onImgError} />
             ))}
           </div>
         </div>
@@ -169,11 +192,11 @@ export default function LandingPage() {
         <div className="grid md:grid-cols-2 gap-10">
           <div>
             <h2 className="text-2xl font-semibold">Contacto</h2>
-            <p className="text-gray-600 mt-2">Cuéntanos sobre tu evento y te enviaremos una cotización.</p>
+            <p className="text-gray-600 mt-2">Cuentanos sobre tu evento y te enviaremos una cotizacion.</p>
             <ul className="mt-6 text-sm text-gray-700 space-y-2">
               <li><strong>WhatsApp:</strong> +51 999 999 999</li>
               <li><strong>Email:</strong> hola@eventosperu.com</li>
-              <li><strong>Ubicación:</strong> Lima, Perú</li>
+              <li><strong>Ubicacion:</strong> Lima, Peru</li>
             </ul>
           </div>
           <form id="cotiza" className="space-y-4">
@@ -187,7 +210,7 @@ export default function LandingPage() {
                 <input className="mt-1 w-full border rounded-md px-3 py-2" placeholder="tucorreo@dominio.com" />
               </div>
               <div>
-                <label className="text-sm">Teléfono</label>
+                <label className="text-sm">Telefono</label>
                 <input className="mt-1 w-full border rounded-md px-3 py-2" placeholder="+51 ..." />
               </div>
             </div>
@@ -196,13 +219,13 @@ export default function LandingPage() {
               <select className="mt-1 w-full border rounded-md px-3 py-2">
                 <option>Boda</option>
                 <option>Corporativo</option>
-                <option>Cumpleaños</option>
+                <option>Cumpleanos</option>
                 <option>Otro</option>
               </select>
             </div>
             <div>
               <label className="text-sm">Mensaje</label>
-              <textarea className="mt-1 w-full border rounded-md px-3 py-2 h-28" placeholder="Cuéntanos fecha, invitados, estilo..." />
+              <textarea className="mt-1 w-full border rounded-md px-3 py-2 h-28" placeholder="Cuentanos fecha, invitados, estilo..." />
             </div>
             <button type="button" className="px-4 py-2 rounded-md bg-brand-primary text-white">Enviar solicitud</button>
           </form>
@@ -210,12 +233,8 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t py-8 text-center text-sm text-gray-500">
-        © {new Date().getFullYear()} Eventos Perú — Todos los derechos reservados.
+        {String.fromCharCode(169)} {new Date().getFullYear()} Eventos Peru - Todos los derechos reservados.
       </footer>
     </div>
   );
 }
-
-
-
-

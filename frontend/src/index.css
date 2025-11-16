@@ -1,5 +1,29 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 html, body, #root { height: 100%; }
+html { scroll-behavior: smooth; }
+
+/* Hover underline animation utility for navbar links */
+@layer utilities {
+  .link-underline-animate { position: relative; }
+  .link-underline-animate::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    height: 2px;
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: left;
+    background-color: currentColor; /* usa el color del link (hover:text-*) */
+    transition: transform 200ms ease;
+  }
+  .link-underline-animate:hover::after { transform: scaleX(1); }
+}
+
+body { font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif; }
+
+
+
