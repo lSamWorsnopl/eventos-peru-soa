@@ -17,12 +17,15 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiCheckCircle,
+  FiClock,
 } from 'react-icons/fi';
 import PublicNavbar from '../components/PublicNavbar';
 import { getServiceById } from '../data/services';
+import type { ServiceSchedule } from '../data/services';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png?url';
 import markerIcon from 'leaflet/dist/images/marker-icon.png?url';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png?url';
+import { useFavorites } from '../hooks/useFavorites';
 
 const defaultMarker = L.icon({
   iconRetinaUrl: markerIcon2x,
@@ -48,15 +51,26 @@ const socialIcons = {
   tiktok: FiInstagram,
 };
 
+const reviewCriteria = ['Servicio', 'Relación calidad-precio', 'Ubicación', 'Limpieza'];
+const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+function getTodaySchedule(schedule: ServiceSchedule[]) {
+  const today = dayNames[new Date().getDay()];
+  return schedule.find((item) => item.day.toLowerCase() === today);
+}
+
+const formatDay = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 export default function ServiceDetailPage() {
   const { serviceId } = useParams<{ serviceId: string }>();
   const service = serviceId ? getServiceById(serviceId) : undefined;
   const [activeTab, setActiveTab] = useState('descripcion');
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   if (!service) {
     return (
       <div className="min-h-screen bg-slate-50 text-gray-900">
-        <PublicNavbar mode="external" activeSection="servicios" />
+        <PublicNavbar mode="external" activeSection="servicios" showAuthActions />
         <div className="max-w-3xl mx-auto px-4 py-20 text-center">
           <p className="text-2xl font-semibold mb-4">No encontramos el servicio solicitado.</p>
           <Link to="/servicios" className="text-brand-primary font-semibold hover:underline">
@@ -68,10 +82,12 @@ export default function ServiceDetailPage() {
   }
 
   const calendar = useMemo(() => buildCalendarGrid(2025, 10), []);
+  const todaySchedule = getTodaySchedule(service.schedule);
+  const fav = isFavorite(service.id);
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      <PublicNavbar mode="external" activeSection="servicios" />
+      <PublicNavbar mode="external" activeSection="servicios" showAuthActions />
       <main className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-20 py-8">
         <Link to="/servicios" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-brand-primary transition">
           <FiArrowLeft />
@@ -101,9 +117,18 @@ export default function ServiceDetailPage() {
                   {service.address} — {service.city}
                 </p>
               </div>
-              <button className="ml-auto flex items-center gap-2 text-sm font-semibold text-brand-primary border border-brand-primary px-4 py-2 rounded-full hover:bg-brand-primary hover:text-white transition">
-                <FiHeart />
-                Guardar en favoritos
+              <button
+                type="button"
+                onClick={() => toggleFavorite(service.id)}
+                aria-pressed={fav}
+                className={`ml-auto flex items-center gap-2 text-sm font-semibold border px-4 py-2 rounded-full transition ${
+                  fav
+                    ? 'bg-brand-primary text-white border-brand-primary'
+                    : 'text-brand-primary border-brand-primary hover:bg-brand-primary hover:text-white'
+                }`}
+              >
+                <FiHeart className={fav ? 'fill-current' : ''} />
+                {fav ? 'Favorito' : 'Guardar en favoritos'}
               </button>
             </div>
           </div>
@@ -140,8 +165,16 @@ export default function ServiceDetailPage() {
             <section className="space-y-12">
               {activeTab === 'descripcion' && (
                 <div className="space-y-6">
-                  <div>
-                    <h2 className="text-xl font-semibold mb-2">Descripción general</h2>
+                  <div className="space-y-3">
+                    <h2 className="text-xl font-semibold">Descripción general</h2>
+                    {todaySchedule && (
+                      <div className="inline-flex items-center gap-2 text-sm font-semibold text-brand-primary bg-brand-primary/10 px-3 py-1 rounded-full">
+                        <FiClock />
+                        {`Hoy: ${todaySchedule.open} - ${todaySchedule.close}${
+                          todaySchedule.note ? ` · ${todaySchedule.note}` : ''
+                        }`}
+                      </div>
+                    )}
                     <p className="text-gray-600 leading-relaxed">{service.description}</p>
                   </div>
                   <div className="grid sm:grid-cols-2 gap-6">
@@ -175,6 +208,22 @@ export default function ServiceDetailPage() {
                         <span key={amenity} className="px-3 py-1 rounded-full bg-gray-100 text-sm text-gray-700 font-medium">
                           {amenity}
                         </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Horario de atención</h3>
+                    <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                      {service.schedule.map((item) => (
+                        <div key={item.day} className="flex items-center justify-between bg-gray-50 rounded-2xl px-4 py-3">
+                          <span className="font-semibold text-gray-700">{formatDay(item.day)}</span>
+                          <div className="text-right">
+                            <p className="text-gray-700">
+                              {item.open} - {item.close}
+                            </p>
+                            {item.note && <p className="text-xs text-gray-500">{item.note}</p>}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -359,17 +408,41 @@ function CalendarView({ calendar, price }: { calendar: (number | null)[]; price:
 }
 
 function AddReviewForm() {
+  const [ratings, setRatings] = useState<Record<string, number>>(() =>
+    reviewCriteria.reduce((acc, key) => ({ ...acc, [key]: 0 }), {}),
+  );
+
+  const handleRating = (criterion: string, value: number) => {
+    setRatings((prev) => ({ ...prev, [criterion]: value }));
+  };
+
   return (
     <form className="rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
       <h3 className="text-xl font-semibold text-gray-900">Añadir opinión</h3>
       <p className="text-sm text-gray-500">Tu correo no será publicado. Todos los campos marcados con * son obligatorios.</p>
-      {['Servicio', 'Relación calidad-precio', 'Ubicación', 'Limpieza'].map((criterion) => (
+      {reviewCriteria.map((criterion) => (
         <div key={criterion} className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-          <span className="w-48 font-semibold">{criterion}</span>
+          <span className="w-48 font-semibold">{criterion} *</span>
           <div className="flex gap-1 text-yellow-500">
-            {Array.from({ length: 5 }).map((_, idx) => (
-              <FiStar key={idx} />
-            ))}
+            {Array.from({ length: 5 }).map((_, idx) => {
+              const value = idx + 1;
+              const active = value <= (ratings[criterion] || 0);
+              return (
+                <button
+                  type="button"
+                  key={`${criterion}-${value}`}
+                  onClick={() => handleRating(criterion, value)}
+                  className="focus:outline-none"
+                  aria-label={`${criterion} ${value} estrellas`}
+                >
+                  <FiStar
+                    className={`text-xl transition ${
+                      active ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'
+                    }`}
+                  />
+                </button>
+              );
+            })}
           </div>
         </div>
       ))}

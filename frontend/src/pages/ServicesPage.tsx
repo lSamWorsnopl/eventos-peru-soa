@@ -18,10 +18,12 @@ import {
   FiBookOpen,
   FiMonitor,
   FiCheckCircle,
+  FiClock,
 } from 'react-icons/fi';
 import PublicNavbar from '../components/PublicNavbar';
-import type { ServiceData } from '../data/services';
+import type { ServiceData, ServiceSchedule } from '../data/services';
 import { servicesData } from '../data/services';
+import { useFavorites } from '../hooks/useFavorites';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png?url';
 import markerIcon from 'leaflet/dist/images/marker-icon.png?url';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png?url';
@@ -54,8 +56,19 @@ const statusColor: Record<string, string> = {
   Cerrado: 'bg-red-100 text-red-600',
 };
 
+const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+function getTodaySchedule(schedule: ServiceSchedule[]) {
+  const today = dayNames[new Date().getDay()];
+  const match = schedule.find((item) => item.day.toLowerCase() === today);
+  if (!match) return null;
+  const label = `Hoy: ${match.open} - ${match.close}${match.note ? ` · ${match.note}` : ''}`;
+  return { ...match, label };
+}
+
 export default function ServicesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('todos');
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const filteredServices = useMemo(() => {
     if (selectedCategory === 'todos') return servicesData;
@@ -64,7 +77,7 @@ export default function ServicesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900">
-      <PublicNavbar mode="external" activeSection="servicios" />
+      <PublicNavbar mode="external" activeSection="servicios" showAuthActions />
       <section className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-20 py-10">
         <header className="flex flex-col gap-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -112,7 +125,12 @@ export default function ServicesPage() {
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="space-y-5 pb-10">
             {filteredServices.map((service) => (
-              <ServiceCard key={service.id} service={service} />
+              <ServiceCard
+                key={service.id}
+                service={service}
+                favorite={isFavorite(service.id)}
+                onToggleFavorite={() => toggleFavorite(service.id)}
+              />
             ))}
           </div>
           <aside
@@ -165,7 +183,16 @@ export default function ServicesPage() {
   );
 }
 
-function ServiceCard({ service }: { service: ServiceData }) {
+function ServiceCard({
+  service,
+  favorite,
+  onToggleFavorite,
+}: {
+  service: ServiceData;
+  favorite: boolean;
+  onToggleFavorite: () => void;
+}) {
+  const todaySchedule = getTodaySchedule(service.schedule);
   return (
     <article className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition overflow-hidden">
       <div className="grid md:grid-cols-2 gap-0">
@@ -186,8 +213,13 @@ function ServiceCard({ service }: { service: ServiceData }) {
               </span>
             ))}
           </div>
-          <button className="absolute top-4 right-4 p-2 rounded-full bg-white/90 hover:bg-white text-brand-primary transition">
-            <FiHeart />
+          <button
+            type="button"
+            onClick={onToggleFavorite}
+            aria-pressed={favorite}
+            className={`absolute top-4 right-4 p-2 rounded-full bg-white/90 hover:bg-white transition ${favorite ? 'text-brand-primary' : 'text-gray-500'}`}
+          >
+            <FiHeart className={favorite ? 'fill-brand-primary text-brand-primary' : ''} />
           </button>
           {service.tags.includes('Destacado') && (
             <span className="absolute bottom-4 left-4 bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-full">
@@ -217,11 +249,17 @@ function ServiceCard({ service }: { service: ServiceData }) {
             <p className="text-sm text-gray-500">{service.subtitle}</p>
           </div>
           <p className="text-gray-600 text-sm max-h-[3.8rem] overflow-hidden">{service.summary}</p>
+          {todaySchedule && (
+            <p className="text-xs text-gray-500 flex items-center gap-1">
+              <FiClock className="text-brand-primary" />
+              {todaySchedule.label}
+            </p>
+          )}
 
-          <div className="flex flex-wrap gap-2">
-            {service.amenities.slice(0, 5).map((amenity) => (
-              <span
-                key={amenity}
+        <div className="flex flex-wrap gap-2">
+          {service.amenities.slice(0, 5).map((amenity) => (
+            <span
+              key={amenity}
                 className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600"
               >
                 <FiCheckCircle className="text-brand-primary" />

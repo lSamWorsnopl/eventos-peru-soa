@@ -6,6 +6,13 @@ export interface ServiceSocial {
   handle: string;
 }
 
+export interface ServiceSchedule {
+  day: string;
+  open: string;
+  close: string;
+  note?: string;
+}
+
 export interface ServiceData {
   id: string;
   name: string;
@@ -23,6 +30,7 @@ export interface ServiceData {
   services: string[];
   events: string[];
   amenities: string[];
+  schedule: ServiceSchedule[];
   heroImage: string;
   gallery: string[];
   coordinates: { lat: number; lng: number };
@@ -66,6 +74,15 @@ export const servicesData: ServiceData[] = [
       'Eventos corporativos',
     ],
     amenities: ['Personal uniformado', 'Transporte', 'Montaje', 'Menaje premium'],
+    schedule: [
+      { day: 'lunes', open: '09:00', close: '22:00' },
+      { day: 'martes', open: '09:00', close: '22:00' },
+      { day: 'miércoles', open: '09:00', close: '22:00' },
+      { day: 'jueves', open: '09:00', close: '22:00' },
+      { day: 'viernes', open: '09:00', close: '23:30' },
+      { day: 'sábado', open: '10:00', close: '02:00', note: 'Eventos nocturnos' },
+      { day: 'domingo', open: '10:00', close: '18:00', note: 'Reservas especiales' },
+    ],
     heroImage:
       'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80',
     gallery: [
@@ -102,6 +119,15 @@ export const servicesData: ServiceData[] = [
     services: ['Vals personalizado', 'Flashmob', 'Animación interactiva', 'Shows temáticos'],
     events: ['Bodas', 'Quinceañeros', 'Graduaciones', 'Eventos corporativos'],
     amenities: ['Vestuario propio', 'Coreógrafo', 'Ensayos', 'Transporte'],
+    schedule: [
+      { day: 'lunes', open: '10:00', close: '21:00' },
+      { day: 'martes', open: '10:00', close: '21:00' },
+      { day: 'miércoles', open: '10:00', close: '22:00' },
+      { day: 'jueves', open: '10:00', close: '22:00' },
+      { day: 'viernes', open: '10:00', close: '00:00', note: 'Ensayos nocturnos' },
+      { day: 'sábado', open: '09:00', close: '01:00', note: 'Shows en vivo' },
+      { day: 'domingo', open: '09:00', close: '18:00' },
+    ],
     heroImage:
       'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1200&q=80',
     gallery: [
@@ -136,6 +162,15 @@ export const servicesData: ServiceData[] = [
     services: ['Salón principal', 'Zona lounge', 'Coordinador onsite', 'Decoración base'],
     events: ['Bodas', 'Conferencias', 'Cocktails', 'Sesiones fotográficas'],
     amenities: ['Estacionamiento', 'Wifi', 'Climatización', 'Seguridad'],
+    schedule: [
+      { day: 'lunes', open: '08:00', close: '20:00' },
+      { day: 'martes', open: '08:00', close: '20:00' },
+      { day: 'miércoles', open: '08:00', close: '22:00' },
+      { day: 'jueves', open: '08:00', close: '22:00' },
+      { day: 'viernes', open: '08:00', close: '23:00' },
+      { day: 'sábado', open: '08:00', close: '23:30' },
+      { day: 'domingo', open: '09:00', close: '18:00', note: 'Visitas guiadas' },
+    ],
     heroImage:
       'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1200&q=80',
     gallery: [
@@ -170,6 +205,15 @@ export const servicesData: ServiceData[] = [
     services: ['Catering alta cocina', 'Decoración floral', 'Wedding planner', 'Pastelería'],
     events: ['Bodas', 'Bautizos', 'Eventos corporativos', 'Cenas privadas'],
     amenities: ['Chef ejecutivo', 'Personal completo', 'Transporte', 'Menaje premium'],
+    schedule: [
+      { day: 'lunes', open: '09:00', close: '19:00' },
+      { day: 'martes', open: '09:00', close: '19:00' },
+      { day: 'miércoles', open: '09:00', close: '21:00' },
+      { day: 'jueves', open: '09:00', close: '21:00' },
+      { day: 'viernes', open: '09:00', close: '23:00' },
+      { day: 'sábado', open: '08:00', close: '23:59', note: 'Bodas y recepciones' },
+      { day: 'domingo', open: '08:00', close: '22:00' },
+    ],
     heroImage:
       'https://images.unsplash.com/photo-1519677100203-a0e668c92439?auto=format&fit=crop&w=1200&q=80',
     gallery: [
@@ -210,6 +254,15 @@ export const servicesData: ServiceData[] = [
     ],
     events: ['Conciertos', 'Festivales', 'Lanzamientos', 'Conferencias'],
     amenities: ['Ingeniero de sonido', 'Transporte', 'Montaje y desmontaje'],
+    schedule: [
+      { day: 'lunes', open: '08:00', close: '23:00' },
+      { day: 'martes', open: '08:00', close: '23:00' },
+      { day: 'miércoles', open: '08:00', close: '23:00' },
+      { day: 'jueves', open: '08:00', close: '23:00' },
+      { day: 'viernes', open: '08:00', close: '03:00', note: 'Cobertura de conciertos' },
+      { day: 'sábado', open: '08:00', close: '03:00' },
+      { day: 'domingo', open: '09:00', close: '22:00' },
+    ],
     heroImage:
       'https://images.unsplash.com/photo-1511376777868-611b54f68947?auto=format&fit=crop&w=1200&q=80',
     gallery: [
@@ -243,6 +296,15 @@ export const servicesData: ServiceData[] = [
     services: ['12 suites', 'Spa con vista', 'Experiencia gastronómica', 'Transporte privado'],
     events: ['Retreats', 'Bodas íntimas', 'Workations', 'Producciones'],
     amenities: ['Desayuno incluido', 'Piscina temperada', 'Coordinador onsite'],
+    schedule: [
+      { day: 'lunes', open: '07:00', close: '21:00' },
+      { day: 'martes', open: '07:00', close: '21:00' },
+      { day: 'miércoles', open: '07:00', close: '21:00' },
+      { day: 'jueves', open: '07:00', close: '21:00' },
+      { day: 'viernes', open: '07:00', close: '22:00' },
+      { day: 'sábado', open: '07:00', close: '22:00' },
+      { day: 'domingo', open: '08:00', close: '20:00', note: 'Check-outs flexibles' },
+    ],
     heroImage:
       'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1200&q=80',
     gallery: [
