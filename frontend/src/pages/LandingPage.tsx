@@ -1,11 +1,58 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { useNavigate, Link } from 'react-router-dom';
 import PublicNavbar from '../components/PublicNavbar';
+import { crearReserva } from '../api/reservas';
+import { useAuth } from '../auth/AuthContext';
+
+const createEmptyContactForm = () => ({
+  nombre: '',
+  email: '',
+  telefono: '',
+  tipoEvento: 'Boda',
+  mensaje: '',
+});
 
 export default function LandingPage() {
   const trackRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0);
   const [paused, setPaused] = useState(false);
   const [active, setActive] = useState('inicio');
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [contactForm, setContactForm] = useState(createEmptyContactForm);
+  const [contactStatus, setContactStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const contactMutation = useMutation({
+    mutationFn: crearReserva,
+    onSuccess: () => {
+      setContactStatus('success');
+      setContactForm(createEmptyContactForm());
+    },
+    onError: () => setContactStatus('error'),
+  });
+  const handleContactChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setContactStatus('idle');
+    setContactForm((prev) => ({ ...prev, [name]: value }));
+  };
+  const formDisabled = !user;
+  const handleContactSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setContactStatus('idle');
+    contactMutation.mutate({
+      origen: 'landing-contact',
+      nombre: contactForm.nombre.trim(),
+      email: contactForm.email.trim(),
+      telefono: contactForm.telefono.trim() || undefined,
+      tipoEvento: contactForm.tipoEvento || undefined,
+      mensaje: contactForm.mensaje.trim() || undefined,
+      servicioNombre: 'Contacto general',
+    });
+  };
 
   const images = [
     '/landing/hero-1.png',
@@ -65,7 +112,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      <PublicNavbar activeSection={active} />
+      <PublicNavbar activeSection={active} showAuthActions />
 
       {/* Hero / Inicio (3 en 3) */}
       <section id="inicio" className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-20 py-10">
@@ -171,35 +218,90 @@ export default function LandingPage() {
               <li><strong>Ubicacion:</strong> Lima, Peru</li>
             </ul>
           </div>
-          <form id="cotiza" className="space-y-4">
+          <form id="cotiza" className="space-y-4" onSubmit={handleContactSubmit}>
+            {!user && (
+              <div className="p-4 rounded-md border border-amber-200 bg-amber-50 text-amber-700 text-sm flex flex-col gap-2">
+                <p className="font-semibold">Debes iniciar sesión para enviar una solicitud.</p>
+                <Link to="/login" className="text-brand-primary underline">
+                  Ir a iniciar sesión
+                </Link>
+              </div>
+            )}
             <div>
               <label className="text-sm">Nombre y apellido</label>
-              <input className="mt-1 w-full border rounded-md px-3 py-2" placeholder="Tu nombre" />
+              <input
+                name="nombre"
+                value={contactForm.nombre}
+                onChange={handleContactChange}
+                required
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                placeholder="Tu nombre"
+                disabled={formDisabled}
+              />
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm">Email</label>
-                <input className="mt-1 w-full border rounded-md px-3 py-2" placeholder="tucorreo@dominio.com" />
+                <input
+                  type="email"
+                  name="email"
+                  value={contactForm.email}
+                  onChange={handleContactChange}
+                  required
+                  className="mt-1 w-full border rounded-md px-3 py-2"
+                  placeholder="tucorreo@dominio.com"
+                  disabled={formDisabled}
+                />
               </div>
               <div>
                 <label className="text-sm">Telefono</label>
-                <input className="mt-1 w-full border rounded-md px-3 py-2" placeholder="+51 ..." />
+                <input
+                  name="telefono"
+                  value={contactForm.telefono}
+                  onChange={handleContactChange}
+                  className="mt-1 w-full border rounded-md px-3 py-2"
+                  placeholder="+51 ..."
+                  disabled={formDisabled}
+                />
               </div>
             </div>
             <div>
               <label className="text-sm">Tipo de evento</label>
-              <select className="mt-1 w-full border rounded-md px-3 py-2">
-                <option>Boda</option>
-                <option>Corporativo</option>
-                <option>Cumpleanos</option>
-                <option>Otro</option>
+              <select
+                name="tipoEvento"
+                value={contactForm.tipoEvento}
+                onChange={handleContactChange}
+                className="mt-1 w-full border rounded-md px-3 py-2"
+                disabled={formDisabled}
+              >
+                <option value="Boda">Boda</option>
+                <option value="Corporativo">Corporativo</option>
+                <option value="Cumpleaños">Cumpleaños</option>
+                <option value="Otro">Otro</option>
               </select>
             </div>
             <div>
               <label className="text-sm">Mensaje</label>
-              <textarea className="mt-1 w-full border rounded-md px-3 py-2 h-28" placeholder="Cuentanos fecha, invitados, estilo..." />
+              <textarea
+                name="mensaje"
+                value={contactForm.mensaje}
+                onChange={handleContactChange}
+                className="mt-1 w-full border rounded-md px-3 py-2 h-28"
+                placeholder="Cuentanos fecha, invitados, estilo..."
+                disabled={formDisabled}
+              />
             </div>
-            <button type="button" className="px-4 py-2 rounded-md bg-brand-primary text-white">Enviar solicitud</button>
+            <button
+              type="submit"
+              disabled={contactMutation.isPending || formDisabled}
+              className="px-4 py-2 rounded-md bg-brand-primary text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {!user ? 'Inicia sesión para reservar' : contactMutation.isPending ? 'Enviando...' : 'Enviar solicitud'}
+            </button>
+            <p className="text-sm" aria-live="polite">
+              {contactStatus === 'success' && <span className="text-green-600">¡Recibimos tu solicitud! Te contactaremos pronto.</span>}
+              {contactStatus === 'error' && <span className="text-red-600">No pudimos enviar tu mensaje. Intenta nuevamente.</span>}
+            </p>
           </form>
         </div>
       </section>

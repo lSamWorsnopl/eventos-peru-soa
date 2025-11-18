@@ -21,6 +21,7 @@ services:
     container_name: api
     depends_on:
       - mongo
+      - rabbitmq
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8081}:8081"
@@ -30,6 +31,27 @@ services:
       JWT_EXP_MIN: ${JWT_EXP_MIN:-15}
       APP_DATA_KEY: ${APP_DATA_KEY:-0123456789ABCDEF0123456789ABCDEF}
       INIT_ADMIN_PASSWORD: ${INIT_ADMIN_PASSWORD:-}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      NOTIFY_EXCHANGE: ${NOTIFY_EXCHANGE:-eventos.notifications.exchange}
+      NOTIFY_QUEUE: ${NOTIFY_QUEUE:-eventos.notifications.queue}
+      NOTIFY_ROUTING_KEY: ${NOTIFY_ROUTING_KEY:-eventos.notifications.created}
+      NOTIFY_ENABLED: ${NOTIFY_ENABLED:-true}
+    networks:
+      - soa_net
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
     networks:
       - soa_net
 

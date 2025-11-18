@@ -1,5 +1,6 @@
 package pe.tucompu.eventos_api.service;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,10 +17,13 @@ public class EventoService {
 
     private final EventoRepository repo;
     private final ProveedorRepository proveedorRepo;
+    private final Optional<NotificationService> notificationService;
 
-    public EventoService(EventoRepository repo, ProveedorRepository proveedorRepo) {
+    public EventoService(EventoRepository repo, ProveedorRepository proveedorRepo,
+            ObjectProvider<NotificationService> notificationServiceProvider) {
         this.repo = repo;
         this.proveedorRepo = proveedorRepo;
+        this.notificationService = Optional.ofNullable(notificationServiceProvider.getIfAvailable());
     }
 
     public List<Evento> listarDelUsuario(String userId) {
@@ -32,7 +36,9 @@ public class EventoService {
         e.setCreadoEn(LocalDateTime.now());
         e.setActualizadoEn(e.getCreadoEn());
         e.setEstado(Evento.Estado.CREADO);
-        return repo.save(e);
+        Evento creado = repo.save(e);
+        notificationService.ifPresent(service -> service.notifyEventoCreado(creado));
+        return creado;
     }
 
     public Optional<Evento> obtener(String userId, String id) {
@@ -104,7 +110,9 @@ public class EventoService {
         return obtener(userId, id).map(ev -> {
             ev.setEstado(nuevo);
             ev.setActualizadoEn(LocalDateTime.now());
-            return repo.save(ev);
+            Evento actualizado = repo.save(ev);
+            notificationService.ifPresent(service -> service.notifyCambioEstado(actualizado));
+            return actualizado;
         });
     }
 

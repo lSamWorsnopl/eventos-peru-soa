@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import BrandLogo from './BrandLogo';
 import { FiShoppingCart, FiUser } from 'react-icons/fi';
+import { useAuth } from '../auth/AuthContext';
+import { useCart } from '../cart/CartContext';
 
 type PublicNavbarProps = {
   activeSection?: string;
@@ -25,6 +27,8 @@ export default function PublicNavbar({
   ctaLabel = 'Hacer reserva',
   showAuthActions = false,
 }: PublicNavbarProps) {
+  const { user, logout } = useAuth();
+  const { itemsCount } = useCart();
   const hrefFor = (id: string) => (mode === 'landing' ? `#${id}` : `/#${id}`);
 
   return (
@@ -78,22 +82,33 @@ export default function PublicNavbar({
 
         {showAuthActions && (
           <div className="hidden lg:flex items-center gap-3 absolute right-6 top-1/2 -translate-y-1/2">
-            <button
-              type="button"
+            <Link
+              to={user ? '/cart' : '/login'}
               className="relative inline-flex items-center justify-center h-10 w-10 rounded-full bg-gray-100 text-gray-600 hover:text-brand-primary transition"
             >
               <FiShoppingCart />
               <span className="absolute -top-1 -right-1 text-[10px] font-bold bg-brand-primary text-white rounded-full h-4 w-4 flex items-center justify-center">
-                0
+                {itemsCount}
               </span>
-            </button>
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:text-brand-primary transition"
-            >
-              <FiUser />
-              <span className="text-sm font-semibold">Iniciar sesión</span>
             </Link>
+            {user ? (
+              <button
+                type="button"
+                onClick={logout}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:text-brand-primary transition"
+              >
+                <FiUser />
+                <span className="text-sm font-semibold">Cerrar sesión</span>
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:text-brand-primary transition"
+              >
+                <FiUser />
+                <span className="text-sm font-semibold">Iniciar sesión</span>
+              </Link>
+            )}
           </div>
         )}
       </div>

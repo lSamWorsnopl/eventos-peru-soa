@@ -1,5 +1,5 @@
-import { Fragment, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Fragment, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -26,6 +26,8 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png?url';
 import markerIcon from 'leaflet/dist/images/marker-icon.png?url';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png?url';
 import { useFavorites } from '../hooks/useFavorites';
+import { useAuth } from '../auth/AuthContext';
+import { useCart } from '../cart/CartContext';
 
 const defaultMarker = L.icon({
   iconRetinaUrl: markerIcon2x,
@@ -61,11 +63,26 @@ function getTodaySchedule(schedule: ServiceSchedule[]) {
 
 const formatDay = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
+const createEmptyReservaForm = () => ({
+  fechaEvento: '',
+  invitados: '',
+  nombre: '',
+  email: '',
+  telefono: '',
+  mensaje: '',
+});
+
 export default function ServiceDetailPage() {
   const { serviceId } = useParams<{ serviceId: string }>();
   const service = serviceId ? getServiceById(serviceId) : undefined;
   const [activeTab, setActiveTab] = useState('descripcion');
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { addItem } = useCart();
+  const [reserveForm, setReserveForm] = useState(createEmptyReservaForm);
+  const [cartStatus, setCartStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isAdding, setIsAdding] = useState(false);
 
   if (!service) {
     return (
@@ -84,6 +101,43 @@ export default function ServiceDetailPage() {
   const calendar = useMemo(() => buildCalendarGrid(2025, 10), []);
   const todaySchedule = getTodaySchedule(service.schedule);
   const fav = isFavorite(service.id);
+
+  const handleReservaChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setCartStatus('idle');
+    setReserveForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleReservaSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setCartStatus('idle');
+    setIsAdding(true);
+    const invitadosRaw = reserveForm.invitados.trim();
+    const invitadosValue = invitadosRaw ? Number(invitadosRaw) : undefined;
+    try {
+      await addItem({
+        servicioId: service.id,
+        servicioNombre: service.name,
+        tipoEvento: service.subtitle,
+        mensaje: reserveForm.mensaje.trim() || undefined,
+        invitados: invitadosValue && !Number.isNaN(invitadosValue) ? invitadosValue : undefined,
+        fechaEvento: reserveForm.fechaEvento || undefined,
+        priceFrom: service.priceFrom,
+        origen: 'service-detail',
+      });
+      setCartStatus('success');
+      setReserveForm(createEmptyReservaForm());
+    } catch (err) {
+      console.error(err);
+      setCartStatus('error');
+    } finally {
+      setIsAdding(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -300,28 +354,116 @@ export default function ServiceDetailPage() {
                     No verificado
                   </span>
                 </div>
-                <form className="mt-6 space-y-4">
+                <form className="mt-6 space-y-4" onSubmit={handleReservaSubmit}>
+                  {!user && (
+                    <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-700">
+                      Debes iniciar sesión para agregar servicios al carrito.
+                      <button
+                        type="button"
+                        onClick={() => navigate('/login')}
+                        className="ml-2 underline text-brand-primary"
+                      >
+                        Iniciar sesión
+                      </button>
+                    </div>
+                  )}
                   <label className="text-sm font-semibold text-gray-700 flex flex-col gap-2">
-                    <span>Seleccionar fechas</span>
+                    <span>Fecha tentativa</span>
                     <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm">
                       <FiCalendar className="text-gray-400" />
-                      <input type="text" placeholder="dd/mm/aaaa" className="flex-1 border-none focus:ring-0 focus:outline-none" />
+                      <input
+                        type="date"
+                        name="fechaEvento"
+                        value={reserveForm.fechaEvento}
+                        onChange={handleReservaChange}
+                        className="flex-1 border-none focus:ring-0 focus:outline-none bg-transparent"
+                        disabled={!user}
+                      />
                     </div>
                   </label>
                   <label className="text-sm font-semibold text-gray-700 flex flex-col gap-2">
-                    <span>Invitados</span>
+                    <span>Invitados estimados</span>
                     <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm">
                       <FiUsers className="text-gray-400" />
-                      <select className="flex-1 border-none focus:ring-0 focus:outline-none bg-transparent">
-                        <option>50 invitados</option>
-                        <option>100 invitados</option>
-                        <option>150 invitados</option>
-                      </select>
+                      <input
+                        type="number"
+                        min={1}
+                        name="invitados"
+                        value={reserveForm.invitados}
+                        onChange={handleReservaChange}
+                        placeholder="Ej. 120"
+                        className="flex-1 border-none focus:ring-0 focus:outline-none bg-transparent"
+                        disabled={!user}
+                      />
                     </div>
                   </label>
-                  <button type="button" className="w-full bg-brand-primary text-white rounded-xl py-3 font-semibold hover:-translate-y-0.5 hover:shadow-lg transition">
-                    Solicitar Reserva
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <label className="text-sm font-semibold text-gray-700 flex flex-col gap-2">
+                      <span>Nombre completo</span>
+                      <input
+                        name="nombre"
+                        value={reserveForm.nombre}
+                        onChange={handleReservaChange}
+                        required
+                        className="px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary/50 focus:outline-none"
+                        disabled={!user}
+                      />
+                    </label>
+                    <label className="text-sm font-semibold text-gray-700 flex flex-col gap-2">
+                      <span>Email</span>
+                      <input
+                        type="email"
+                        name="email"
+                        value={reserveForm.email}
+                        onChange={handleReservaChange}
+                        required
+                        className="px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary/50 focus:outline-none"
+                        disabled={!user}
+                      />
+                    </label>
+                  </div>
+                  <label className="text-sm font-semibold text-gray-700 flex flex-col gap-2">
+                    <span>Teléfono</span>
+                    <input
+                      name="telefono"
+                      value={reserveForm.telefono}
+                      onChange={handleReservaChange}
+                      className="px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary/50 focus:outline-none"
+                      disabled={!user}
+                    />
+                  </label>
+                  <label className="text-sm font-semibold text-gray-700 flex flex-col gap-2">
+                    <span>Cuéntanos más detalles</span>
+                    <textarea
+                      name="mensaje"
+                      value={reserveForm.mensaje}
+                      onChange={handleReservaChange}
+                      rows={4}
+                      className="px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-primary/50 focus:outline-none"
+                      placeholder="Fechas, estilo, presupuesto aproximado..."
+                      disabled={!user}
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={isAdding || !user}
+                    className="w-full bg-brand-primary text-white rounded-xl py-3 font-semibold hover:-translate-y-0.5 hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {!user ? 'Inicia sesión para continuar' : isAdding ? 'Guardando...' : 'Agregar al carrito'}
                   </button>
+                  <p className="text-sm" aria-live="polite">
+                    {cartStatus === 'success' && (
+                      <span className="text-green-600">
+                        ¡Listo! El servicio se añadió a tu carrito.{' '}
+                        <button type="button" onClick={() => navigate('/cart')} className="underline">
+                          Ver carrito
+                        </button>
+                      </span>
+                    )}
+                    {cartStatus === 'error' && (
+                      <span className="text-red-600">No pudimos guardar tu selección. Intenta nuevamente.</span>
+                    )}
+                  </p>
                 </form>
               </div>
 

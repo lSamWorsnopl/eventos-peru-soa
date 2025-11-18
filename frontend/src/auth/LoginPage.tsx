@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import { useAuth } from './AuthContext';
@@ -45,7 +45,6 @@ export default function LoginPage() {
         return;
       } else {
         await login(u, p);
-        nav('/dashboard');
       }
     } catch (error: unknown) {
       const ax = error as AxiosError<ApiError>;
@@ -66,7 +65,14 @@ export default function LoginPage() {
     }
   }
 
-  if (user) nav('/dashboard');
+  useEffect(() => {
+    if (!user) return;
+    if (user.role === 'ADMIN') {
+      nav('/dashboard', { replace: true });
+    } else {
+      nav('/cart', { replace: true });
+    }
+  }, [user, nav]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-sky-50 flex">
