@@ -51,4 +51,5 @@ export interface ServiceData {
   ownerUserId?: string | null;
   availableDates?: string[];
   availabilityMode?: 'FLEXIBLE' | 'MANUAL';
+  statusMode?: 'MANUAL' | 'AUTO';
 }

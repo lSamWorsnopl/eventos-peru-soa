@@ -23,6 +23,11 @@ public class Servicio {
         MANUAL
     }
 
+    public enum StatusMode {
+        MANUAL,
+        AUTO
+    }
+
     @Id
     private String id;
 
@@ -52,6 +57,7 @@ public class Servicio {
     private List<Social> social;
     private List<String> availableDates;
     private AvailabilityMode availabilityMode;
+    private StatusMode statusMode;
     private String ownerUserId;
 
     private LocalDateTime createdAt;

@@ -1,7 +1,10 @@
 package pe.tucompu.eventos_api.service;
 
 import java.text.Normalizer;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -49,6 +52,9 @@ public class ServicioService {
         }
         if (servicio.getAvailabilityMode() == null) {
             servicio.setAvailabilityMode(Servicio.AvailabilityMode.FLEXIBLE);
+        }
+        if (servicio.getStatusMode() == null) {
+            servicio.setStatusMode(Servicio.StatusMode.MANUAL);
         }
         return repository.save(servicio);
     }
@@ -101,6 +107,8 @@ public class ServicioService {
                 actual.setAvailableDates(cambios.getAvailableDates());
             if (cambios.getAvailabilityMode() != null)
                 actual.setAvailabilityMode(cambios.getAvailabilityMode());
+            if (cambios.getStatusMode() != null)
+                actual.setStatusMode(cambios.getStatusMode());
             if (StringUtils.hasText(cambios.getSlug())) {
                 actual.setSlug(generarSlug(cambios.getSlug(), cambios.getName() != null ? cambios.getName() : actual.getName()));
             }
@@ -114,6 +122,59 @@ public class ServicioService {
 
     public void eliminar(String id) {
         repository.deleteById(id);
+    }
+
+    public Servicio applyDynamicStatus(Servicio servicio) {
+        if (servicio == null)
+            return null;
+        if (servicio.getStatusMode() != Servicio.StatusMode.AUTO)
+            return servicio;
+        boolean abierto = evaluarAuto(servicio);
+        servicio.setStatus(abierto ? Servicio.Estado.ABIERTO : Servicio.Estado.CERRADO);
+        return servicio;
+    }
+
+    public List<Servicio> applyDynamicStatus(List<Servicio> servicios) {
+        return servicios.stream().map(this::applyDynamicStatus).toList();
+    }
+
+    private boolean evaluarAuto(Servicio servicio) {
+        LocalDateTime ahora = LocalDateTime.now(ZoneId.of("America/Lima"));
+        if (!verificarFechaDisponible(servicio, ahora.toLocalDate()))
+            return false;
+        return verificarHorario(servicio, ahora.toLocalTime(), ahora.getDayOfWeek().name().toLowerCase(Locale.ROOT));
+    }
+
+    private boolean verificarFechaDisponible(Servicio servicio, LocalDate hoy) {
+        var fechas = servicio.getAvailableDates();
+        if (fechas == null || fechas.isEmpty())
+            return true;
+        String hoyStr = hoy.toString();
+        return fechas.stream().map(String::trim).map(String::toLowerCase).anyMatch(f -> f.equals(hoyStr));
+    }
+
+    private boolean verificarHorario(Servicio servicio, LocalTime horaActual, String diaActual) {
+        var horarios = servicio.getSchedule();
+        if (horarios == null || horarios.isEmpty())
+            return false;
+        for (var slot : horarios) {
+            if (slot == null || slot.getDay() == null)
+                continue;
+            String diaSlot = slot.getDay().trim().toLowerCase(Locale.ROOT);
+            if (!diaSlot.equals(diaActual))
+                continue;
+            if (!StringUtils.hasText(slot.getOpen()) || !StringUtils.hasText(slot.getClose()))
+                return true;
+            try {
+                LocalTime inicio = LocalTime.parse(slot.getOpen().trim());
+                LocalTime fin = LocalTime.parse(slot.getClose().trim());
+                if (!horaActual.isBefore(inicio) && !horaActual.isAfter(fin))
+                    return true;
+            } catch (Exception ex) {
+                return false;
+            }
+        }
+        return false;
     }
 
     private String generarSlug(String slugPropuesto, String nombre) {

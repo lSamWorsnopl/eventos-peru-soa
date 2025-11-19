@@ -35,6 +35,7 @@ const emptyForm = {
   priceFrom: '',
   heroImage: '',
   status: 'ABIERTO' as ServiceStatus,
+  statusMode: 'MANUAL' as 'MANUAL' | 'AUTO',
   contactHost: '',
   contactEmail: '',
   contactPhone: '',
@@ -160,6 +161,7 @@ export default function PerfilProveedor() {
         priceFrom: servicio.priceFrom != null ? String(servicio.priceFrom) : '',
         heroImage: servicio.heroImage || '',
         status: (servicio.status as ServiceStatus) || 'ABIERTO',
+        statusMode: (servicio.statusMode as 'MANUAL' | 'AUTO') || 'MANUAL',
         contactHost: servicio.contact?.host || '',
         contactEmail: servicio.contact?.email || '',
         contactPhone: servicio.contact?.phone || '',
@@ -230,6 +232,7 @@ export default function PerfilProveedor() {
       availableDates: availableDates.length ? availableDates : undefined,
       availabilityMode: form.availabilityMode,
       status: form.status,
+      statusMode: form.statusMode,
     };
   }
 
@@ -405,6 +408,18 @@ export default function PerfilProveedor() {
               <option value="ABIERTO">Abierto</option>
               <option value="CERRADO">Cerrado</option>
             </select>
+          </label>
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-gray-700">Modo de estado</span>
+            <select
+              className="border rounded p-2 w-full"
+              value={form.statusMode}
+              onChange={(e) => setForm({ ...form, statusMode: e.target.value as 'MANUAL' | 'AUTO' })}
+            >
+              <option value="MANUAL">Manual (tu eliges abierto/cerrado)</option>
+              <option value="AUTO">Automático (según horario)</option>
+            </select>
+            <p className="text-xs text-gray-500">En modo automático se usará el horario y fechas para calcular si está abierto.</p>
           </label>
 
           <label className="block space-y-1">

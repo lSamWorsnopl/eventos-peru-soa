@@ -45,6 +45,7 @@ public class ServicioController {
         } else {
             todos = servicioService.listar();
         }
+        todos = servicioService.applyDynamicStatus(todos);
         if (categoria == null || categoria.isBlank())
             return todos;
         String filtro = categoria.trim().toLowerCase();
@@ -58,9 +59,9 @@ public class ServicioController {
     public ResponseEntity<Servicio> obtener(@PathVariable String idOrSlug) {
         Optional<Servicio> porId = servicioService.obtener(idOrSlug);
         if (porId.isPresent())
-            return ResponseEntity.ok(porId.get());
+            return ResponseEntity.ok(servicioService.applyDynamicStatus(porId.get()));
         Optional<Servicio> porSlug = servicioService.obtenerPorSlug(idOrSlug);
-        return porSlug.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+        return porSlug.map(servicioService::applyDynamicStatus).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
@@ -97,6 +98,7 @@ public class ServicioController {
             servicio.setOwnerUserId(existente.getOwnerUserId());
         }
         return servicioService.actualizar(id, servicio)
+                .map(servicioService::applyDynamicStatus)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

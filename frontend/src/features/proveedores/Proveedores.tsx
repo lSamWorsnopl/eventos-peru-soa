@@ -93,6 +93,7 @@ const emptyServicioForm = {
   priceFrom: '',
   heroImage: '',
   status: 'ABIERTO' as ServiceStatus,
+  statusMode: 'MANUAL' as 'MANUAL' | 'AUTO',
   contactHost: '',
   contactEmail: '',
   contactPhone: '',
@@ -137,6 +138,21 @@ const formatHumanDate = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+const renderRatingStars = (rating?: number | null) => {
+  if (rating == null) return <span className="text-gray-400">-</span>;
+  const rounded = Math.max(0, Math.min(5, Math.round(rating)));
+  return (
+    <div className="flex items-center gap-1">
+      {Array.from({ length: 5 }).map((_, idx) => (
+        <span key={idx} className={idx < rounded ? 'text-yellow-500' : 'text-gray-300'}>
+          ★
+        </span>
+      ))}
+      <span className="text-xs text-gray-500">{rating.toFixed(1)}</span>
+    </div>
+  );
 };
 
 export default function Proveedores() {
@@ -221,6 +237,14 @@ export default function Proveedores() {
     onError: (e: any) => setServiceErr(e?.response?.data?.message || 'No se pudo eliminar el servicio'),
   });
 
+  const quickStatusMut = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: ServiceStatus }) => updateServicio(id, { status, statusMode: 'MANUAL' }),
+    onSuccess: () => {
+      refetchServicios();
+    },
+    onError: (e: any) => setServiceErr(e?.response?.data?.message || 'No se pudo actualizar el estado'),
+  });
+
   function onEditProveedor(p: Proveedor) {
     setEditingId(p.id);
     setForm({
@@ -266,6 +290,7 @@ export default function Proveedores() {
         priceFrom: servicio.priceFrom != null ? String(servicio.priceFrom) : '',
         heroImage: servicio.heroImage || '',
         status: (servicio.status as ServiceStatus) || 'ABIERTO',
+        statusMode: (servicio.statusMode as 'MANUAL' | 'AUTO') || 'MANUAL',
         contactHost: servicio.contact?.host || '',
         contactEmail: servicio.contact?.email || '',
         contactPhone: servicio.contact?.phone || '',
@@ -336,6 +361,7 @@ export default function Proveedores() {
       availableDates: availableDates.length ? availableDates : undefined,
       availabilityMode: serviceForm.availabilityMode,
       status: serviceForm.status,
+      statusMode: serviceForm.statusMode,
     };
   }
 
@@ -566,6 +592,7 @@ export default function Proveedores() {
                     <th className="text-left p-2">Nombre</th>
                     <th className="text-left p-2">Ciudad</th>
                     <th className="text-left p-2">Precio desde</th>
+                    <th className="text-left p-2">Rating</th>
                     <th className="text-left p-2">Estado</th>
                     <th className="text-left p-2">Hero</th>
                     <th className="text-left p-2">Galería</th>
@@ -582,6 +609,7 @@ export default function Proveedores() {
                         </td>
                         <td className="p-2">{serv.city || '-'}</td>
                         <td className="p-2">{serv.priceFrom != null ? `S/ ${serv.priceFrom.toFixed(2)}` : '-'}</td>
+                        <td className="p-2">{renderRatingStars(serv.rating)}</td>
                         <td className="p-2">{serv.status ? <Badge color={serv.status === 'ABIERTO' ? 'green' : 'orange'}>{serv.status}</Badge> : '-'}</td>
                         <td className="p-2">
                           {serv.heroImage ? <img src={serv.heroImage} alt={serv.name} className="h-12 w-20 object-cover rounded" /> : <span className="text-xs text-gray-400">Sin imagen</span>}
@@ -590,6 +618,33 @@ export default function Proveedores() {
                         <td className="p-2 space-x-1">
                           <IconButton icon="edit" label="Editar" onClick={() => openServiceModal(serv)} />
                           <IconButton icon="trash" label="Eliminar" variant="danger" onClick={() => { if (confirm('¿Eliminar servicio?')) deleteServicioMut.mutate(serv.id); }} />
+                          {serv.status === 'ABIERTO' ? (
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-red-50 text-red-600 border border-red-200"
+                              onClick={() => {
+                                if (confirm('¿Desactivar este servicio?')) {
+                                  quickStatusMut.mutate({ id: serv.id, status: 'CERRADO' });
+                                }
+                              }}
+                              disabled={quickStatusMut.isPending}
+                            >
+                              Desactivar
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-green-50 text-green-700 border border-green-200"
+                              onClick={() => {
+                                if (confirm('¿Activar este servicio?')) {
+                                  quickStatusMut.mutate({ id: serv.id, status: 'ABIERTO' });
+                                }
+                              }}
+                              disabled={quickStatusMut.isPending}
+                            >
+                              Activar
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -658,6 +713,18 @@ export default function Proveedores() {
                   <option value="CERRADO">Cerrado (oculto)</option>
                 </select>
                 <p className="text-xs text-gray-500">Define si el servicio está disponible para el público.</p>
+              </label>
+              <label className="block space-y-1">
+                <span className="text-sm font-medium text-gray-700">Modo de estado</span>
+                <select
+                  className="border rounded p-2 w-full"
+                  value={serviceForm.statusMode}
+                  onChange={(e) => setServiceForm({ ...serviceForm, statusMode: e.target.value as 'MANUAL' | 'AUTO' })}
+                >
+                  <option value="MANUAL">Manual (elige abierto/cerrado)</option>
+                  <option value="AUTO">Automático (según horario)</option>
+                </select>
+                <p className="text-xs text-gray-500">En automático, se usará el horario y fechas para determinar si está abierto.</p>
               </label>
 
               <label className="block space-y-1">

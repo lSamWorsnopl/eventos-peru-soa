@@ -77,7 +77,7 @@ export default function ServicesPage() {
   });
 
   const filteredServices = useMemo(() => {
-    const list = services ?? [];
+    const list = (services ?? []).filter((service) => service.status === 'ABIERTO');
     if (selectedCategory === 'todos') return list;
     return list.filter((service) => service.categories?.includes(selectedCategory));
   }, [services, selectedCategory]);
