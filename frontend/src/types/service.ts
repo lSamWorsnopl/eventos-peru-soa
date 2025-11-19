@@ -48,4 +48,7 @@ export interface ServiceData {
   coordinates?: ServiceCoordinates;
   contact?: ServiceContact;
   social?: ServiceSocial[];
+  ownerUserId?: string | null;
+  availableDates?: string[];
+  availabilityMode?: 'FLEXIBLE' | 'MANUAL';
 }

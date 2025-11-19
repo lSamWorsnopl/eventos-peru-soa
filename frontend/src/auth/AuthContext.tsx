@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const derivedUser: User = {
             id: me.principal || 'unknown',
             username: (me.username || me.principal) || 'unknown',
-            role: authorities.includes('ROLE_ADMIN') ? 'ADMIN' : 'CLIENTE',
+            role: deriveRole(authorities),
           };
           setUser(derivedUser);
           localStorage.setItem('user', JSON.stringify(derivedUser));
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const derivedUser: User = {
       id: me.principal || 'unknown',
       username: (me.username || username),
-      role: authorities.includes('ROLE_ADMIN') ? 'ADMIN' : 'CLIENTE',
+      role: deriveRole(authorities),
     };
     localStorage.setItem('user', JSON.stringify(derivedUser));
     setUser(derivedUser);
@@ -65,6 +65,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(() => ({ user, login, logout }), [user]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+function deriveRole(authorities: string[]): Role {
+  if (authorities.includes('ROLE_ADMIN')) return 'ADMIN';
+  if (authorities.includes('ROLE_PROVEEDOR')) return 'PROVEEDOR';
+  return 'CLIENTE';
 }
 
 // 👇 Esto corrige el aviso “Fast refresh only works…”

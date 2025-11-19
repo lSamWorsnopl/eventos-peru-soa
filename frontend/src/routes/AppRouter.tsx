@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import RequireAuth from '../auth/RequireAuth';
 import LoginPage from '../auth/LoginPage';
 import AdminLayout from '../layout/AdminLayout';
+import ProviderLayout from '../layout/ProviderLayout';
 import LandingPage from '../pages/LandingPage';
 import ServicesPage from '../pages/ServicesPage';
 import ServiceDetailPage from '../pages/ServiceDetailPage';
@@ -9,11 +10,13 @@ import CartPage from '../pages/CartPage';
 
 import MisEventos from '../features/eventos/MisEventos';
 import Proveedores from '../features/proveedores/Proveedores';
+import PerfilProveedor from '../features/proveedores/PerfilProveedor';
 import Usuarios from '../features/usuarios/Usuarios';
 import EventoDetalle from '../features/eventos/EventoDetalle';
 import Perfil from '../features/perfil/Perfil';
 import RequireAdmin from '../auth/RequireAdmin';
 import RequireClient from '../auth/RequireClient';
+import RequireProvider from '../auth/RequireProvider';
 
 const router = createBrowserRouter([
   // Público: Landing en '/'
@@ -25,6 +28,16 @@ const router = createBrowserRouter([
     path: '/cart',
     element: <RequireClient />,
     children: [{ index: true, element: <CartPage /> }],
+  },
+  {
+    path: '/proveedor',
+    element: <RequireProvider />,
+    children: [
+      {
+        element: <ProviderLayout />,
+        children: [{ index: true, element: <PerfilProveedor /> }],
+      },
+    ],
   },
 
   // Alias para el home del panel en '/dashboard'

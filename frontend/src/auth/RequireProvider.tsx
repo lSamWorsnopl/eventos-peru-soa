@@ -1,12 +1,11 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
-export default function RequireClient() {
+export default function RequireProvider() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== 'CLIENTE') {
+  if (user.role !== 'PROVEEDOR') {
     if (user.role === 'ADMIN') return <Navigate to="/dashboard" replace />;
-    if (user.role === 'PROVEEDOR') return <Navigate to="/proveedor" replace />;
     return <Navigate to="/" replace />;
   }
   return <Outlet />;

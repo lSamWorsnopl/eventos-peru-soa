@@ -18,6 +18,11 @@ public class Servicio {
         CERRADO
     }
 
+    public enum AvailabilityMode {
+        FLEXIBLE,
+        MANUAL
+    }
+
     @Id
     private String id;
 
@@ -45,6 +50,9 @@ public class Servicio {
     private Coordinates coordinates;
     private Contact contact;
     private List<Social> social;
+    private List<String> availableDates;
+    private AvailabilityMode availabilityMode;
+    private String ownerUserId;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

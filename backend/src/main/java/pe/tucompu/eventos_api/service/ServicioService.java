@@ -25,6 +25,11 @@ public class ServicioService {
         return repository.findAll();
     }
 
+    public List<Servicio> listarPorOwner(String ownerUserId) {
+        if (ownerUserId == null || ownerUserId.isBlank()) return List.of();
+        return repository.findByOwnerUserId(ownerUserId);
+    }
+
     public Optional<Servicio> obtener(String id) {
         return repository.findById(id);
     }
@@ -39,6 +44,12 @@ public class ServicioService {
         var ahora = LocalDateTime.now();
         servicio.setCreatedAt(ahora);
         servicio.setUpdatedAt(ahora);
+        if (servicio.getOwnerUserId() != null && servicio.getOwnerUserId().isBlank()) {
+            servicio.setOwnerUserId(null);
+        }
+        if (servicio.getAvailabilityMode() == null) {
+            servicio.setAvailabilityMode(Servicio.AvailabilityMode.FLEXIBLE);
+        }
         return repository.save(servicio);
     }
 
@@ -86,8 +97,15 @@ public class ServicioService {
                 actual.setContact(cambios.getContact());
             if (cambios.getSocial() != null)
                 actual.setSocial(cambios.getSocial());
+            if (cambios.getAvailableDates() != null)
+                actual.setAvailableDates(cambios.getAvailableDates());
+            if (cambios.getAvailabilityMode() != null)
+                actual.setAvailabilityMode(cambios.getAvailabilityMode());
             if (StringUtils.hasText(cambios.getSlug())) {
                 actual.setSlug(generarSlug(cambios.getSlug(), cambios.getName() != null ? cambios.getName() : actual.getName()));
+            }
+            if (cambios.getOwnerUserId() != null) {
+                actual.setOwnerUserId(cambios.getOwnerUserId().isBlank() ? null : cambios.getOwnerUserId());
             }
             actual.setUpdatedAt(LocalDateTime.now());
             return repository.save(actual);

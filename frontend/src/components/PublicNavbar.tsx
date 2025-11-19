@@ -29,6 +29,7 @@ export default function PublicNavbar({
 }: PublicNavbarProps) {
   const { user, logout } = useAuth();
   const { itemsCount } = useCart();
+  const panelHref = user?.role === 'ADMIN' ? '/dashboard' : user?.role === 'PROVEEDOR' ? '/proveedor' : null;
   const hrefFor = (id: string) => (mode === 'landing' ? `#${id}` : `/#${id}`);
 
   return (
@@ -92,14 +93,25 @@ export default function PublicNavbar({
               </span>
             </Link>
             {user ? (
-              <button
-                type="button"
-                onClick={logout}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:text-brand-primary transition"
-              >
-                <FiUser />
-                <span className="text-sm font-semibold">Cerrar sesión</span>
-              </button>
+              <>
+                {panelHref && (
+                  <Link
+                    to={panelHref}
+                    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/20 transition"
+                  >
+                    <FiUser />
+                    <span className="text-sm font-semibold">Panel</span>
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:text-brand-primary transition"
+                >
+                  <FiUser />
+                  <span className="text-sm font-semibold">Cerrar sesión</span>
+                </button>
+              </>
             ) : (
               <Link
                 to="/login"

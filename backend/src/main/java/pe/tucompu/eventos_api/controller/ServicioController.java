@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.validation.Valid;
 import pe.tucompu.eventos_api.model.Servicio;
@@ -32,8 +33,18 @@ public class ServicioController {
     }
 
     @GetMapping
-    public List<Servicio> listar(@RequestParam(name = "categoria", required = false) String categoria) {
-        var todos = servicioService.listar();
+    public List<Servicio> listar(
+            @RequestParam(name = "categoria", required = false) String categoria,
+            @RequestParam(name = "mine", required = false, defaultValue = "false") boolean mine,
+            Authentication auth) {
+        List<Servicio> todos;
+        if (mine) {
+            if (auth == null)
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "auth requerida para ver tus servicios");
+            todos = servicioService.listarPorOwner(auth.getName());
+        } else {
+            todos = servicioService.listar();
+        }
         if (categoria == null || categoria.isBlank())
             return todos;
         String filtro = categoria.trim().toLowerCase();
@@ -54,8 +65,12 @@ public class ServicioController {
 
     @PostMapping
     public ResponseEntity<Servicio> crear(@Valid @RequestBody Servicio servicio, Authentication auth) {
-        if (!esAdmin(auth))
+        if (!(esAdmin(auth) || esProveedor(auth)))
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        if (!esAdmin(auth) || servicio.getOwnerUserId() == null || servicio.getOwnerUserId().isBlank()) {
+            if (auth != null)
+                servicio.setOwnerUserId(auth.getName());
+        }
         Servicio creado = servicioService.crear(servicio);
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
@@ -64,8 +79,23 @@ public class ServicioController {
     public ResponseEntity<Servicio> actualizar(@PathVariable String id,
             @RequestBody Servicio servicio,
             Authentication auth) {
-        if (!esAdmin(auth))
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        var existenteOpt = servicioService.obtener(id);
+        if (existenteOpt.isEmpty())
+            return ResponseEntity.notFound().build();
+        Servicio existente = existenteOpt.get();
+        boolean isAdmin = esAdmin(auth);
+        boolean isProveedor = esProveedor(auth);
+        if (!isAdmin) {
+            if (!isProveedor)
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            var requesterId = auth != null ? auth.getName() : null;
+            if (existente.getOwnerUserId() == null) {
+                existente.setOwnerUserId(requesterId);
+            } else if (!existente.getOwnerUserId().equals(requesterId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            servicio.setOwnerUserId(existente.getOwnerUserId());
+        }
         return servicioService.actualizar(id, servicio)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -73,7 +103,10 @@ public class ServicioController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable String id, Authentication auth) {
-        if (!esAdmin(auth))
+        var existenteOpt = servicioService.obtener(id);
+        if (existenteOpt.isEmpty())
+            return ResponseEntity.notFound().build();
+        if (!puedeGestionar(auth, existenteOpt.get()))
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         servicioService.eliminar(id);
         return ResponseEntity.noContent().build();
@@ -85,5 +118,21 @@ public class ServicioController {
         return auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch("ROLE_ADMIN"::equals);
+    }
+
+    private boolean esProveedor(Authentication auth) {
+        if (auth == null)
+            return false;
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_PROVEEDOR"::equals);
+    }
+
+    private boolean puedeGestionar(Authentication auth, Servicio servicio) {
+        if (esAdmin(auth))
+            return true;
+        return esProveedor(auth)
+                && servicio.getOwnerUserId() != null
+                && servicio.getOwnerUserId().equals(auth.getName());
     }
 }

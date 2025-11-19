@@ -69,6 +69,8 @@ export default function LoginPage() {
     if (!user) return;
     if (user.role === 'ADMIN') {
       nav('/dashboard', { replace: true });
+    } else if (user.role === 'PROVEEDOR') {
+      nav('/proveedor', { replace: true });
     } else {
       nav('/cart', { replace: true });
     }

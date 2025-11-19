@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
@@ -21,7 +21,7 @@ import {
   FiClock,
 } from 'react-icons/fi';
 import PublicNavbar from '../components/PublicNavbar';
-import type { ServiceSchedule } from '../types/service';
+import type { ServiceData, ServiceSchedule } from '../types/service';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png?url';
 import markerIcon from 'leaflet/dist/images/marker-icon.png?url';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png?url';
@@ -84,7 +84,11 @@ export default function ServiceDetailPage() {
   const [reserveForm, setReserveForm] = useState(createEmptyReservaForm);
   const [cartStatus, setCartStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [isAdding, setIsAdding] = useState(false);
-  const calendar = useMemo(() => buildCalendarGrid(2025, 10), []);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const calendar = useMemo(
+    () => buildCalendarGrid(calendarMonth.getFullYear(), calendarMonth.getMonth()),
+    [calendarMonth],
+  );
   const {
     data: service,
     isLoading,
@@ -94,6 +98,27 @@ export default function ServiceDetailPage() {
     queryFn: () => fetchService(serviceId as string),
     enabled: !!serviceId,
   });
+
+  useEffect(() => {
+    if (!service) return;
+    if (service.availabilityMode === 'MANUAL' && service.availableDates && service.availableDates.length) {
+      setReserveForm((prev) => (prev.fechaEvento ? prev : { ...prev, fechaEvento: service.availableDates![0] }));
+      setCalendarMonth(new Date(service.availableDates[0]));
+    } else {
+      setCalendarMonth(new Date());
+    }
+  }, [service]);
+
+  const manualDates = service?.availableDates ?? [];
+  const manualDatesSet = useMemo(
+    () => new Set(manualDates.map((d) => normalizeDateString(d))),
+    [manualDates],
+  );
+  const manualDatesMap = useMemo(() => {
+    const map = new Map<string, string>();
+    manualDates.forEach((d) => map.set(normalizeDateString(d), d));
+    return map;
+  }, [manualDates]);
 
   if (isLoading) {
     return (
@@ -119,8 +144,21 @@ export default function ServiceDetailPage() {
 
   const todaySchedule = getTodaySchedule(service.schedule);
   const fav = isFavorite(service.id);
+  const isManualAvailability = service.availabilityMode === 'MANUAL';
+  const hasManualDates = isManualAvailability && manualDates.length > 0;
+  const manualDatesUnavailable = isManualAvailability && !manualDates.length;
+  const manualSelectionMissing = isManualAvailability && hasManualDates && !reserveForm.fechaEvento;
+  const todayIso = new Date().toISOString().split('T')[0];
+  const addButtonDisabled = isAdding || !user || manualSelectionMissing || manualDatesUnavailable;
 
-  const handleReservaChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleCalendarDateSelect = (isoKey: string) => {
+    if (isManualAvailability && !manualDatesSet.has(isoKey)) return;
+    const selectedValue = isManualAvailability ? manualDatesMap.get(isoKey) ?? isoKey : isoKey;
+    setReserveForm((prev) => ({ ...prev, fechaEvento: selectedValue }));
+    setCartStatus('idle');
+  };
+
+  const handleReservaChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setCartStatus('idle');
     setReserveForm((prev) => ({ ...prev, [name]: value }));
@@ -130,6 +168,15 @@ export default function ServiceDetailPage() {
     e.preventDefault();
     if (!user) {
       navigate('/login');
+      return;
+    }
+    if (!service) return;
+    if (isManualAvailability && manualDates.length === 0) {
+      setCartStatus('error');
+      return;
+    }
+    if (isManualAvailability && manualDates.length > 0 && !reserveForm.fechaEvento) {
+      setCartStatus('error');
       return;
     }
     setCartStatus('idle');
@@ -148,7 +195,11 @@ export default function ServiceDetailPage() {
         origen: 'service-detail',
       });
       setCartStatus('success');
-      setReserveForm(createEmptyReservaForm());
+      setReserveForm(() => ({
+        ...createEmptyReservaForm(),
+        fechaEvento:
+          service.availabilityMode === 'MANUAL' && manualDates.length ? manualDates[0] : '',
+      }));
     } catch (err) {
       console.error(err);
       setCartStatus('error');
@@ -268,6 +319,18 @@ export default function ServiceDetailPage() {
                         ))}
                       </ul>
                     </div>
+                    {hasManualDates && (
+                      <div className="rounded-3xl border border-gray-100 shadow-sm p-5 space-y-3 md:col-span-2">
+                        <p className="text-xs uppercase text-gray-500 tracking-wide">Fechas disponibles</p>
+                        <ul className="flex flex-wrap gap-2 text-sm text-gray-700">
+                          {service.availableDates!.map((date) => (
+                            <li key={date} className="px-3 py-1 rounded-full bg-gray-100">
+                              {formatPeruDate(date)}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -330,10 +393,19 @@ export default function ServiceDetailPage() {
                 </div>
               )}
 
-              <section>
-                <h3 className="text-xl font-semibold mb-3">Vista de Calendario</h3>
-                <CalendarView calendar={calendar} price={service.priceFrom ?? 0} />
-              </section>
+            <section>
+              <h3 className="text-xl font-semibold mb-3">Vista de Calendario</h3>
+              <CalendarView
+                calendar={calendar}
+                price={service.priceFrom ?? 0}
+                month={calendarMonth}
+                onPrev={() => setCalendarMonth((prev) => addMonths(prev, -1))}
+                onNext={() => setCalendarMonth((prev) => addMonths(prev, 1))}
+                availableDates={manualDatesSet}
+                availabilityMode={service.availabilityMode}
+                onDateSelect={handleCalendarDateSelect}
+              />
+            </section>
             </section>
 
             <aside className="space-y-6">
@@ -365,15 +437,43 @@ export default function ServiceDetailPage() {
                     <span>Fecha tentativa</span>
                     <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm">
                       <FiCalendar className="text-gray-400" />
-                      <input
-                        type="date"
-                        name="fechaEvento"
-                        value={reserveForm.fechaEvento}
-                        onChange={handleReservaChange}
-                        className="flex-1 border-none focus:ring-0 focus:outline-none bg-transparent"
-                        disabled={!user}
-                      />
+                      {isManualAvailability ? (
+                        hasManualDates ? (
+                          <select
+                            name="fechaEvento"
+                            value={reserveForm.fechaEvento}
+                            onChange={handleReservaChange}
+                            className="flex-1 border-none focus:ring-0 focus:outline-none bg-transparent"
+                            disabled={!user}
+                          >
+                            <option value="">Selecciona una fecha</option>
+                          {manualDates.map((date) => (
+                            <option key={date} value={date}>
+                              {formatPeruDate(date)}
+                            </option>
+                          ))}
+                        </select>
+                        ) : (
+                          <span className="text-gray-500 text-sm">Sin fechas publicadas por ahora.</span>
+                        )
+                      ) : (
+                        <input
+                          type="date"
+                          min={todayIso}
+                          name="fechaEvento"
+                          value={reserveForm.fechaEvento}
+                          onChange={handleReservaChange}
+                          className="flex-1 border-none focus:ring-0 focus:outline-none bg-transparent"
+                          disabled={!user}
+                        />
+                      )}
                     </div>
+                    {isManualAvailability && hasManualDates && !reserveForm.fechaEvento && (
+                      <p className="text-xs text-red-600">Selecciona una fecha disponible.</p>
+                    )}
+                    {isManualAvailability && !hasManualDates && (
+                      <p className="text-xs text-red-600">El proveedor aún no ha publicado fechas disponibles.</p>
+                    )}
                   </label>
                   <label className="text-sm font-semibold text-gray-700 flex flex-col gap-2">
                     <span>Invitados estimados</span>
@@ -440,7 +540,7 @@ export default function ServiceDetailPage() {
                   </label>
                   <button
                     type="submit"
-                    disabled={isAdding || !user}
+                    disabled={addButtonDisabled}
                     className="w-full bg-brand-primary text-white rounded-xl py-3 font-semibold hover:-translate-y-0.5 hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {!user ? 'Inicia sesión para continuar' : isAdding ? 'Guardando...' : 'Agregar al carrito'}
@@ -508,44 +608,101 @@ export default function ServiceDetailPage() {
   );
 }
 
-function CalendarView({ calendar, price }: { calendar: (number | null)[]; price: number }) {
+function formatPeruDate(dateStr: string) {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('es-PE', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function CalendarView({
+  calendar,
+  price,
+  month,
+  onPrev,
+  onNext,
+  availableDates,
+  availabilityMode,
+  onDateSelect,
+}: {
+  calendar: (number | null)[];
+  price: number;
+  month: Date;
+  onPrev: () => void;
+  onNext: () => void;
+  availableDates: Set<string>;
+  availabilityMode?: ServiceData['availabilityMode'];
+  onDateSelect?: (iso: string) => void;
+}) {
   const weeks = [];
   for (let i = 0; i < calendar.length; i += 7) {
     weeks.push(calendar.slice(i, i + 7));
   }
+  const monthLabel = month.toLocaleString('es-PE', { month: 'long', year: 'numeric' });
+  const isManual = availabilityMode === 'MANUAL';
 
   return (
     <div className="rounded-3xl border border-gray-100 shadow-sm p-6">
       <div className="flex items-center justify-between mb-4">
-        <button className="p-2 rounded-full border border-gray-200 text-gray-500 hover:text-brand-primary">
+        <button
+          className="p-2 rounded-full border border-gray-200 text-gray-500 hover:text-brand-primary"
+          onClick={onPrev}
+          aria-label="Mes anterior"
+        >
           <FiChevronLeft />
         </button>
         <div className="text-center">
-          <p className="text-sm text-gray-500">November 2025</p>
+          <p className="text-sm text-gray-500 capitalize">{monthLabel}</p>
           <p className="text-xl font-semibold text-gray-900">Disponibilidad</p>
         </div>
-        <button className="p-2 rounded-full border border-gray-200 text-gray-500 hover:text-brand-primary">
+        <button
+          className="p-2 rounded-full border border-gray-200 text-gray-500 hover:text-brand-primary"
+          onClick={onNext}
+          aria-label="Mes siguiente"
+        >
           <FiChevronRight />
         </button>
       </div>
       <div className="grid grid-cols-7 gap-2 text-center text-sm font-semibold text-gray-500">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+        {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
           <span key={day}>{day}</span>
         ))}
       </div>
       <div className="mt-2 grid grid-cols-7 gap-2 text-center text-sm">
         {weeks.map((week, idx) => (
           <Fragment key={idx}>
-            {week.map((day, index) =>
-              day ? (
-                <div key={`${idx}-${index}`} className="border border-gray-100 rounded-xl py-3 flex flex-col items-center justify-center text-xs">
+            {week.map((day, index) => {
+              if (!day) return <div key={`${idx}-${index}`} />;
+              const isoKey = formatDateKey(month.getFullYear(), month.getMonth(), day);
+              const indicator = renderAvailabilityIndicator(
+                month.getFullYear(),
+                month.getMonth(),
+                day,
+                availableDates,
+                isManual,
+                price,
+              );
+              const isAvailable = !isManual || availableDates.has(isoKey);
+              const hasHandler = typeof onDateSelect === 'function';
+              const canSelect = hasHandler && isAvailable;
+              return (
+                <button
+                  type="button"
+                  key={`${idx}-${index}`}
+                  className={`border border-gray-100 rounded-xl py-3 flex flex-col items-center justify-center text-xs transition ${
+                    canSelect ? 'hover:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/40 cursor-pointer' : 'cursor-not-allowed opacity-60'
+                  }`}
+                  onClick={canSelect ? () => onDateSelect(isoKey) : undefined}
+                  disabled={!canSelect}
+                >
                   <span className="text-gray-700">{day}</span>
-                  <span className="mt-1 text-green-600 font-semibold text-[11px]">S/{price.toFixed(2)}</span>
-                </div>
-              ) : (
-                <div key={`${idx}-${index}`} />
-              )
-            )}
+                  {indicator}
+                </button>
+              );
+            })}
           </Fragment>
         ))}
       </div>
@@ -628,4 +785,36 @@ function buildCalendarGrid(year: number, month: number) {
   for (let day = 1; day <= totalDays; day += 1) days.push(day);
   while (days.length % 7 !== 0) days.push(null);
   return days;
+}
+
+function renderAvailabilityIndicator(
+  year: number,
+  monthIndex: number,
+  day: number,
+  availableDates: Set<string>,
+  isManual: boolean,
+  price: number,
+) {
+  const key = formatDateKey(year, monthIndex, day);
+  const isAvailable = isManual ? availableDates.has(key) : true;
+  if (!isAvailable) {
+    return <span className="mt-1 text-[11px] font-semibold text-gray-300">No disp.</span>;
+  }
+  return <span className="mt-1 text-green-600 font-semibold text-[11px]">S/{price.toFixed(2)}</span>;
+}
+
+function formatDateKey(year: number, monthIndex: number, day: number) {
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function normalizeDateString(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return formatDateKey(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addMonths(date: Date, amount: number) {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + amount);
+  return next;
 }

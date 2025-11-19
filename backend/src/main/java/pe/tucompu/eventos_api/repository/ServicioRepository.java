@@ -11,4 +11,6 @@ public interface ServicioRepository extends MongoRepository<Servicio, String> {
     Optional<Servicio> findBySlug(String slug);
 
     boolean existsBySlug(String slug);
+
+    java.util.List<Servicio> findByOwnerUserId(String ownerUserId);
 }

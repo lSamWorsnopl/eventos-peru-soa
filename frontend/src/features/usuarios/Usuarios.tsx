@@ -37,7 +37,7 @@ export default function Usuarios() {
   const [form, setForm] = useState<Omit<Usuario, 'id'>>({ username: '', nombre: '', roles: ['USER'] });
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [q, setQ] = useState('');
-  const [fRol, setFRol] = useState<'ALL' | 'ADMIN' | 'USER'>('ALL');
+  const [fRol, setFRol] = useState<'ALL' | 'ADMIN' | 'USER' | 'PROVEEDOR'>('ALL');
 
   const createMut = useMutation({
     mutationFn: createUsuario,
@@ -84,6 +84,7 @@ export default function Usuarios() {
             <option value="ALL">Todos</option>
             <option value="ADMIN">ADMIN</option>
             <option value="USER">USER</option>
+            <option value="PROVEEDOR">PROVEEDOR</option>
           </select>
             <IconButton icon="refresh" label="Refrescar" onClick={() => refetch()} />
             <button onClick={() => { setShowCreate(true); setErrMsg(null); }} className="inline-flex items-center gap-2 px-3 py-2 rounded bg-red-600 bg-brand-primary text-white text-sm shadow hover:brightness-110"><Icon name='plus' /> Nuevo usuario</button>
@@ -97,6 +98,7 @@ export default function Usuarios() {
           <select className="border rounded p-2" value={((form.roles||[])[0]) || 'USER'} onChange={(e) => setForm({ ...form, roles: [e.target.value] })}>
             <option value="USER">USER</option>
             <option value="ADMIN">ADMIN</option>
+            <option value="PROVEEDOR">PROVEEDOR</option>
           </select>
           {errMsg && <p className="text-sm text-red-600 md:col-span-3">{errMsg}</p>}
           <div className="md:col-span-3 flex gap-2">
@@ -142,7 +144,7 @@ export default function Usuarios() {
                   <tr key={u.id} className="border-t hover:bg-gray-50/60 transition-colors">
                     <td className="p-2">{u.username}</td>
                     <td className="p-2">{u.nombre || '-'}</td>
-                    <td className="p-2">{(u.roles || []).map(r => <Badge key={r} color={r === 'ADMIN' ? 'brand' : 'gray'}>{r}</Badge>)}</td>
+                    <td className="p-2">{(u.roles || []).map(r => <Badge key={r} color={r === 'ADMIN' ? 'brand' : r === 'PROVEEDOR' ? 'yellow' : 'gray'}>{r}</Badge>)}</td>
                     <td className="p-2 space-x-1">
                       <IconButton icon="edit" label="Editar" onClick={() => onEdit(u)} />
                       <IconButton icon="trash" label="Eliminar" variant="danger" onClick={() => { if (confirm('¿Eliminar usuario?')) deleteMut.mutate(u.id); }} />
