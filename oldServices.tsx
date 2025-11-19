@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
@@ -22,12 +21,12 @@ import {
   FiClock,
 } from 'react-icons/fi';
 import PublicNavbar from '../components/PublicNavbar';
-import type { ServiceData, ServiceSchedule } from '../types/service';
+import type { ServiceData, ServiceSchedule } from '../data/services';
+import { servicesData } from '../data/services';
 import { useFavorites } from '../hooks/useFavorites';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png?url';
 import markerIcon from 'leaflet/dist/images/marker-icon.png?url';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png?url';
-import { fetchServices } from '../api/services';
 
 const defaultMarker = L.icon({
   iconRetinaUrl: markerIcon2x,
@@ -41,46 +40,40 @@ const defaultMarker = L.icon({
 
 const categories = [
   { id: 'todos', label: 'Todos', icon: FiGrid },
-  { id: 'Animaci√≥n y entretenimiento', label: 'Animaci√≥n y entretenimiento', icon: FiFeather },
+  { id: 'Animaci+¶n y entretenimiento', label: 'Animaci+¶n y entretenimiento', icon: FiFeather },
   { id: 'Alojamientos', label: 'Alojamientos', icon: FiHome },
   { id: 'Belleza y moda', label: 'Belleza y moda', icon: FiScissors },
   { id: 'Catering y bebidas', label: 'Catering y bebidas', icon: FiCoffee },
-  { id: 'Decoraci√≥n y ambientaci√≥n', label: 'Decoraci√≥n y ambientaci√≥n', icon: FiLayers },
+  { id: 'Decoraci+¶n y ambientaci+¶n', label: 'Decoraci+¶n y ambientaci+¶n', icon: FiLayers },
   { id: 'Espacios y locaciones', label: 'Espacios y locaciones', icon: FiBookOpen },
   { id: 'Invitaciones y recuerdos', label: 'Invitaciones y recuerdos', icon: FiMonitor },
-  { id: 'Organizaci√≥n y planificaci√≥n', label: 'Organizaci√≥n y planificaci√≥n', icon: FiFilter },
-  { id: 'Tecnolog√≠a y sonido', label: 'Tecnolog√≠a y sonido', icon: FiMonitor },
+  { id: 'Organizaci+¶n y planificaci+¶n', label: 'Organizaci+¶n y planificaci+¶n', icon: FiFilter },
+  { id: 'Tecnolog+°a y sonido', label: 'Tecnolog+°a y sonido', icon: FiMonitor },
 ];
 
 const statusColor: Record<string, string> = {
-  ABIERTO: 'bg-green-100 text-green-700',
-  CERRADO: 'bg-red-100 text-red-600',
+  Abierto: 'bg-green-100 text-green-700',
+  Cerrado: 'bg-red-100 text-red-600',
 };
 
-const dayNames = ['domingo', 'lunes', 'martes', 'mi√©rcoles', 'jueves', 'viernes', 's√°bado'];
+const dayNames = ['domingo', 'lunes', 'martes', 'mi+Ærcoles', 'jueves', 'viernes', 's+Ìbado'];
 
-function getTodaySchedule(schedule?: ServiceSchedule[]) {
-  if (!schedule) return null;
+function getTodaySchedule(schedule: ServiceSchedule[]) {
   const today = dayNames[new Date().getDay()];
   const match = schedule.find((item) => item.day.toLowerCase() === today);
   if (!match) return null;
-  const label = `Hoy: ${match.open} - ${match.close}${match.note ? ` ¬∑ ${match.note}` : ''}`;
+  const label = `Hoy: ${match.open} - ${match.close}${match.note ? ` -¿ ${match.note}` : ''}`;
   return { ...match, label };
 }
 
 export default function ServicesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('todos');
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { data: services, isLoading, isError } = useQuery({
-    queryKey: ['servicios'],
-    queryFn: fetchServices,
-  });
 
   const filteredServices = useMemo(() => {
-    const list = services ?? [];
-    if (selectedCategory === 'todos') return list;
-    return list.filter((service) => service.categories?.includes(selectedCategory));
-  }, [services, selectedCategory]);
+    if (selectedCategory === 'todos') return servicesData;
+    return servicesData.filter((service) => service.categories.includes(selectedCategory));
+  }, [selectedCategory]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900">
@@ -118,9 +111,7 @@ export default function ServicesPage() {
                   key={id}
                   onClick={() => setSelectedCategory(id)}
                   className={`flex flex-col items-center justify-center min-w-[120px] px-4 py-2 rounded-2xl border text-xs font-semibold transition ${
-                    isActive
-                      ? 'bg-brand-primary/10 border-brand-primary text-brand-primary'
-                      : 'bg-white border-gray-200 text-gray-700 hover:border-brand-primary/60'
+                    isActive ? 'bg-brand-primary/10 border-brand-primary text-brand-primary' : 'bg-white border-gray-200 text-gray-700 hover:border-brand-primary/60'
                   }`}
                 >
                   <Icon className="text-lg mb-1" />
@@ -131,13 +122,8 @@ export default function ServicesPage() {
           </div>
         </header>
 
-        <div className="mt-8 flex gap-6">
-          <div className="w-1/2 min-w-[400px] space-y-5 pb-10 max-h-[calc(100vh-180px)] overflow-y-auto pr-1">
-            {isLoading && <div className="text-gray-500 text-center py-10">Cargando servicios...</div>}
-            {isError && <div className="text-red-600 text-center py-10">No se pudieron cargar los servicios.</div>}
-            {!isLoading && !isError && filteredServices.length === 0 && (
-              <div className="text-gray-500 text-center py-10">Sin resultados para esta categor√≠a.</div>
-            )}
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="space-y-5 pb-10">
             {filteredServices.map((service) => (
               <ServiceCard
                 key={service.id}
@@ -147,11 +133,14 @@ export default function ServicesPage() {
               />
             ))}
           </div>
-
-          <aside className="w-1/2 min-w-[320px] sticky top-24 self-start" style={{ height: 'calc(100vh - 150px)' }}>
+          <aside
+            className="hidden lg:block sticky top-28 self-start"
+            style={{ height: 'calc(100vh - 150px)' }}
+          >
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
               <div className="p-4 border-b border-gray-100 text-sm text-gray-500">
-                <span className="font-semibold text-gray-900">{filteredServices.length}</span> listados disponibles
+                <span className="font-semibold text-gray-900">{filteredServices.length}</span> listados
+                disponibles
               </div>
               <div className="relative flex-1" style={{ height: 'calc(100vh - 210px)' }}>
                 <MapContainer
@@ -164,30 +153,28 @@ export default function ServicesPage() {
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
-                  {filteredServices
-                    .filter((service) => service.coordinates)
-                    .map((service) => (
-                      <Marker
-                        position={[service.coordinates!.lat, service.coordinates!.lng]}
-                        key={service.id}
-                        icon={defaultMarker}
-                      >
-                        <Popup>
-                          <div className="text-sm">
-                            <p className="font-semibold text-gray-900">{service.name}</p>
-                            <p className="text-gray-500">{service.city}</p>
-                            <Link to={`/servicios/${service.slug || service.id}`} className="text-brand-primary text-xs font-semibold">
-                              Ver detalle
-                            </Link>
-                          </div>
-                        </Popup>
-                      </Marker>
+                  {filteredServices.map((service) => (
+                    <Marker
+                      position={[service.coordinates.lat, service.coordinates.lng]}
+                      key={service.id}
+                      icon={defaultMarker}
+                    >
+                      <Popup>
+                        <div className="text-sm">
+                          <p className="font-semibold text-gray-900">{service.name}</p>
+                          <p className="text-gray-500">{service.city}</p>
+                          <Link to={`/servicios/${service.id}`} className="text-brand-primary text-xs font-semibold">
+                            Ver detalle
+                          </Link>
+                        </div>
+                      </Popup>
+                    </Marker>
                   ))}
                 </MapContainer>
+                <button className="absolute top-4 right-4 z-20 bg-white/95 text-xs font-semibold px-4 py-2 rounded-full shadow hover:shadow-md">
+                  Mostrar los siguientes {filteredServices.length} listados
+                </button>
               </div>
-              <button className="m-4 bg-white/90 text-xs font-semibold px-4 py-2 rounded-full shadow hover:shadow-md self-end">
-                Mostrar los siguientes {filteredServices.length} listados
-              </button>
             </div>
           </aside>
         </div>
@@ -210,17 +197,18 @@ function ServiceCard({
     <article className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition overflow-hidden">
       <div className="grid md:grid-cols-2 gap-0">
         <div className="relative">
-          {service.heroImage ? (
-            <img src={service.heroImage} alt={service.name} className="h-full w-full object-cover min-h-[240px]" />
-          ) : (
-            <div className="h-full w-full min-h-[240px] bg-gray-100 grid place-items-center text-gray-400">Sin imagen</div>
-          )}
-          <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-            {service.categories?.map((category) => (
-              <span
-                key={category}
-                className="px-3 py-1 rounded-full text-xs font-semibold bg-brand-primary/10 text-brand-primary shadow-sm"
-              >
+          <img
+            src={service.heroImage}
+            alt={service.name}
+            className="h-full w-full object-cover min-h-[240px]"
+            loading="lazy"
+          />
+              <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+                {service.categories.map((category) => (
+                  <span
+                    key={category}
+                    className="px-3 py-1 rounded-full text-xs font-semibold bg-brand-primary/10 text-brand-primary shadow-sm"
+                  >
                 {category}
               </span>
             ))}
@@ -229,23 +217,19 @@ function ServiceCard({
             type="button"
             onClick={onToggleFavorite}
             aria-pressed={favorite}
-            className={`absolute top-4 right-4 p-2 rounded-full bg-white/90 hover:bg-white transition ${
-              favorite ? 'text-brand-primary' : 'text-gray-500'
-            }`}
+            className={`absolute top-4 right-4 p-2 rounded-full bg-white/90 hover:bg-white transition ${favorite ? 'text-brand-primary' : 'text-gray-500'}`}
           >
             <FiHeart className={favorite ? 'fill-brand-primary text-brand-primary' : ''} />
           </button>
-          {service.tags?.includes('Destacado') && (
+          {service.tags.includes('Destacado') && (
             <span className="absolute bottom-4 left-4 bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-full">
               Destacado
             </span>
           )}
           <span
-            className={`absolute bottom-4 right-4 text-xs font-semibold px-3 py-1 rounded-full ${
-              statusColor[service.status] || 'bg-gray-100 text-gray-600'
-            }`}
+            className={`absolute bottom-4 right-4 text-xs font-semibold px-3 py-1 rounded-full ${statusColor[service.status] || 'bg-gray-100 text-gray-600'}`}
           >
-            {service.status === 'ABIERTO' ? 'Abierto' : 'Cerrado'}
+            {service.status}
           </span>
         </div>
 
@@ -253,10 +237,10 @@ function ServiceCard({
           <div>
             <p className="text-sm text-gray-500 flex items-center gap-1">
               <FiMapPin className="text-brand-primary" />
-              {service.address} ‚Äî {service.city}
+              {service.address} ‘«ˆ {service.city}
             </p>
             <Link
-              to={`/servicios/${service.slug || service.id}`}
+              to={`/servicios/${service.id}`}
               className="mt-1 inline-flex items-center gap-2 text-2xl font-semibold text-gray-900 hover:text-brand-primary transition"
             >
               {service.name}
@@ -272,31 +256,29 @@ function ServiceCard({
             </p>
           )}
 
-          {service.amenities && service.amenities.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {service.amenities.slice(0, 5).map((amenity) => (
-                <span
-                  key={amenity}
-                  className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600"
-                >
-                  <FiCheckCircle className="text-brand-primary" />
-                  {amenity}
-                </span>
-              ))}
-            </div>
-          )}
+        <div className="flex flex-wrap gap-2">
+          {service.amenities.slice(0, 5).map((amenity) => (
+            <span
+              key={amenity}
+                className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600"
+              >
+                <FiCheckCircle className="text-brand-primary" />
+                {amenity}
+              </span>
+            ))}
+          </div>
 
           <div className="flex items-center justify-between pt-2 border-t border-gray-100">
             <div className="flex items-center gap-2 text-sm">
               <FiStar className="text-yellow-500" />
               <div>
-                <span className="font-semibold text-gray-900">{service.rating?.toFixed(1) ?? '4.5'}</span>{' '}
-                <span className="text-gray-500">({service.reviews ?? 0} rese√±as)</span>
+                <span className="font-semibold text-gray-900">{service.rating.toFixed(1)}</span>{' '}
+                <span className="text-gray-500">({service.reviews} rese+¶as)</span>
               </div>
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-500">Comienza desde</p>
-              <p className="text-lg font-semibold text-brand-primary">S/{service.priceFrom?.toFixed(2) ?? '0.00'}</p>
+              <p className="text-lg font-semibold text-brand-primary">S/{service.priceFrom.toFixed(2)}</p>
             </div>
           </div>
         </div>

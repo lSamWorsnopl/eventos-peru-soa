@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
@@ -20,14 +21,14 @@ import {
   FiClock,
 } from 'react-icons/fi';
 import PublicNavbar from '../components/PublicNavbar';
-import { getServiceById } from '../data/services';
-import type { ServiceSchedule } from '../data/services';
+import type { ServiceSchedule } from '../types/service';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png?url';
 import markerIcon from 'leaflet/dist/images/marker-icon.png?url';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png?url';
 import { useFavorites } from '../hooks/useFavorites';
 import { useAuth } from '../auth/AuthContext';
 import { useCart } from '../cart/CartContext';
+import { fetchService } from '../api/services';
 
 const defaultMarker = L.icon({
   iconRetinaUrl: markerIcon2x,
@@ -56,7 +57,8 @@ const socialIcons = {
 const reviewCriteria = ['Servicio', 'Relación calidad-precio', 'Ubicación', 'Limpieza'];
 const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
-function getTodaySchedule(schedule: ServiceSchedule[]) {
+function getTodaySchedule(schedule?: ServiceSchedule[]) {
+  if (!schedule) return null;
   const today = dayNames[new Date().getDay()];
   return schedule.find((item) => item.day.toLowerCase() === today);
 }
@@ -74,7 +76,6 @@ const createEmptyReservaForm = () => ({
 
 export default function ServiceDetailPage() {
   const { serviceId } = useParams<{ serviceId: string }>();
-  const service = serviceId ? getServiceById(serviceId) : undefined;
   const [activeTab, setActiveTab] = useState('descripcion');
   const { isFavorite, toggleFavorite } = useFavorites();
   const { user } = useAuth();
@@ -83,8 +84,26 @@ export default function ServiceDetailPage() {
   const [reserveForm, setReserveForm] = useState(createEmptyReservaForm);
   const [cartStatus, setCartStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [isAdding, setIsAdding] = useState(false);
+  const calendar = useMemo(() => buildCalendarGrid(2025, 10), []);
+  const {
+    data: service,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['servicio', serviceId],
+    queryFn: () => fetchService(serviceId as string),
+    enabled: !!serviceId,
+  });
 
-  if (!service) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white text-gray-900 grid place-items-center">
+        <p className="text-gray-500">Cargando servicio...</p>
+      </div>
+    );
+  }
+
+  if (isError || !service) {
     return (
       <div className="min-h-screen bg-slate-50 text-gray-900">
         <PublicNavbar mode="external" activeSection="servicios" showAuthActions />
@@ -98,7 +117,6 @@ export default function ServiceDetailPage() {
     );
   }
 
-  const calendar = useMemo(() => buildCalendarGrid(2025, 10), []);
   const todaySchedule = getTodaySchedule(service.schedule);
   const fav = isFavorite(service.id);
 
@@ -151,12 +169,12 @@ export default function ServiceDetailPage() {
         <section className="mt-6 space-y-6">
           <div>
             <div className="flex flex-wrap gap-3 text-sm">
-              {service.categories.map((category) => (
+              {service.categories?.map((category) => (
                 <span key={category} className="px-3 py-1 rounded-full bg-brand-primary/10 text-brand-primary font-semibold">
                   {category}
                 </span>
               ))}
-              {service.tags.map((tag) => (
+              {service.tags?.map((tag) => (
                 <span key={tag} className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 font-medium">
                   {tag}
                 </span>
@@ -176,9 +194,7 @@ export default function ServiceDetailPage() {
                 onClick={() => toggleFavorite(service.id)}
                 aria-pressed={fav}
                 className={`ml-auto flex items-center gap-2 text-sm font-semibold border px-4 py-2 rounded-full transition ${
-                  fav
-                    ? 'bg-brand-primary text-white border-brand-primary'
-                    : 'text-brand-primary border-brand-primary hover:bg-brand-primary hover:text-white'
+                  fav ? 'bg-brand-primary text-white border-brand-primary' : 'text-brand-primary border-brand-primary hover:bg-brand-primary hover:text-white'
                 }`}
               >
                 <FiHeart className={fav ? 'fill-current' : ''} />
@@ -188,15 +204,14 @@ export default function ServiceDetailPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-            <img src={service.gallery[0]} alt={service.name} className="rounded-3xl object-cover w-full h-full min-h-[320px]" />
+            {service.gallery?.[0] ? (
+              <img src={service.gallery[0]} alt={service.name} className="rounded-3xl object-cover w-full h-full min-h-[320px]" />
+            ) : (
+              <div className="rounded-3xl bg-gray-100 min-h-[320px] grid place-items-center text-gray-500">Sin imagen</div>
+            )}
             <div className="grid grid-cols-2 gap-3">
-              {service.gallery.slice(1, 5).map((image, idx) => (
-                <img
-                  key={`${image}-${idx}`}
-                  src={image}
-                  alt={service.name}
-                  className="rounded-2xl object-cover w-full h-full min-h-[150px]"
-                />
+              {(service.gallery ?? []).slice(1, 5).map((image, idx) => (
+                <img key={`${image}-${idx}`} src={image} alt={service.name} className="rounded-2xl object-cover w-full h-full min-h-[150px]" />
               ))}
             </div>
           </div>
@@ -224,61 +239,34 @@ export default function ServiceDetailPage() {
                     {todaySchedule && (
                       <div className="inline-flex items-center gap-2 text-sm font-semibold text-brand-primary bg-brand-primary/10 px-3 py-1 rounded-full">
                         <FiClock />
-                        {`Hoy: ${todaySchedule.open} - ${todaySchedule.close}${
-                          todaySchedule.note ? ` · ${todaySchedule.note}` : ''
-                        }`}
+                        {`Hoy: ${todaySchedule.open} - ${todaySchedule.close}${todaySchedule.note ? ` · ${todaySchedule.note}` : ''}`}
                       </div>
                     )}
                     <p className="text-gray-600 leading-relaxed">{service.description}</p>
                   </div>
-                  <div className="grid sm:grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Servicios principales</h3>
-                      <ul className="space-y-2 text-gray-600">
-                        {service.services.map((item) => (
-                          <li key={item} className="flex items-start gap-2">
-                            <FiCheckCircle className="mt-1 text-brand-primary" />
+
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="rounded-3xl border border-gray-100 shadow-sm p-5 space-y-3">
+                      <p className="text-xs uppercase text-gray-500 tracking-wide">Servicios destacados</p>
+                      <ul className="space-y-2 text-sm text-gray-700">
+                        {(service.services ?? []).map((item) => (
+                          <li key={item} className="flex items-center gap-2">
+                            <FiCheckCircle className="text-brand-primary" />
                             {item}
                           </li>
                         ))}
                       </ul>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Eventos que cubre</h3>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        {service.events.map((event) => (
-                          <span key={event} className="flex items-center gap-2 text-gray-600">
+                    <div className="rounded-3xl border border-gray-100 shadow-sm p-5 space-y-3">
+                      <p className="text-xs uppercase text-gray-500 tracking-wide">Eventos cubiertos</p>
+                      <ul className="space-y-2 text-sm text-gray-700">
+                        {(service.events ?? []).map((item) => (
+                          <li key={item} className="flex items-center gap-2">
                             <FiCheckCircle className="text-brand-primary" />
-                            {event}
-                          </span>
+                            {item}
+                          </li>
                         ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Amenidades incluidas</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {service.amenities.map((amenity) => (
-                        <span key={amenity} className="px-3 py-1 rounded-full bg-gray-100 text-sm text-gray-700 font-medium">
-                          {amenity}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Horario de atención</h3>
-                    <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                      {service.schedule.map((item) => (
-                        <div key={item.day} className="flex items-center justify-between bg-gray-50 rounded-2xl px-4 py-3">
-                          <span className="font-semibold text-gray-700">{formatDay(item.day)}</span>
-                          <div className="text-right">
-                            <p className="text-gray-700">
-                              {item.open} - {item.close}
-                            </p>
-                            {item.note && <p className="text-xs text-gray-500">{item.note}</p>}
-                          </div>
-                        </div>
-                      ))}
+                      </ul>
                     </div>
                   </div>
                 </div>
@@ -286,7 +274,7 @@ export default function ServiceDetailPage() {
 
               {activeTab === 'galeria' && (
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {service.gallery.map((image, idx) => (
+                  {(service.gallery ?? []).map((image, idx) => (
                     <img key={`${image}-${idx}`} src={image} alt={service.name} className="rounded-2xl object-cover w-full h-full min-h-[220px]" />
                   ))}
                 </div>
@@ -298,18 +286,24 @@ export default function ServiceDetailPage() {
                     <h2 className="text-xl font-semibold mb-2">Ubicación</h2>
                     <p className="text-gray-600">{service.address} — {service.city}</p>
                   </div>
-                  <MapContainer center={[service.coordinates.lat, service.coordinates.lng]} zoom={14} className="h-80 w-full rounded-3xl overflow-hidden" scrollWheelZoom={false}>
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    <Marker position={[service.coordinates.lat, service.coordinates.lng]} icon={defaultMarker}>
-                      <Popup>
-                        <strong>{service.name}</strong>
-                        <p className="text-xs text-gray-600">{service.address}</p>
-                      </Popup>
-                    </Marker>
-                  </MapContainer>
+                  {service.coordinates ? (
+                    <MapContainer center={[service.coordinates.lat, service.coordinates.lng]} zoom={14} className="h-80 w-full rounded-3xl overflow-hidden" scrollWheelZoom={false}>
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <Marker position={[service.coordinates.lat, service.coordinates.lng]} icon={defaultMarker}>
+                        <Popup>
+                          <strong>{service.name}</strong>
+                          <p className="text-xs text-gray-600">{service.address}</p>
+                        </Popup>
+                      </Marker>
+                    </MapContainer>
+                  ) : (
+                    <div className="rounded-3xl border border-dashed border-gray-200 h-80 grid place-items-center text-sm text-gray-500">
+                      Este proveedor no ha cargado su coordenada exacta.
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -319,17 +313,17 @@ export default function ServiceDetailPage() {
                     <div>
                       <p className="text-sm text-gray-500">Calificación general</p>
                       <div className="flex items-center gap-2">
-                        <span className="text-4xl font-bold text-gray-900">{service.rating.toFixed(1)}</span>
+                        <span className="text-4xl font-bold text-gray-900">{service.rating?.toFixed(1) ?? '4.5'}</span>
                         <div className="flex">
                           {Array.from({ length: 5 }).map((_, idx) => (
                             <FiStar
                               key={idx}
-                              className={`text-xl ${idx < Math.round(service.rating) ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
+                              className={`text-xl ${idx < Math.round(service.rating ?? 4.5) ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
                             />
                           ))}
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500">{service.reviews} opiniones</p>
+                      <p className="text-sm text-gray-500">{service.reviews ?? 0} opiniones</p>
                     </div>
                   </div>
                   <AddReviewForm />
@@ -338,7 +332,7 @@ export default function ServiceDetailPage() {
 
               <section>
                 <h3 className="text-xl font-semibold mb-3">Vista de Calendario</h3>
-                <CalendarView calendar={calendar} price={service.priceFrom} />
+                <CalendarView calendar={calendar} price={service.priceFrom ?? 0} />
               </section>
             </section>
 
@@ -347,11 +341,11 @@ export default function ServiceDetailPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-gray-500">Reserva</p>
-                    <p className="text-2xl font-bold text-brand-primary">S/{service.priceFrom.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-brand-primary">S/{(service.priceFrom ?? 0).toFixed(2)}</p>
                     <p className="text-xs text-gray-500">por hora</p>
                   </div>
                   <span className="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700 font-semibold">
-                    No verificado
+                    {service.status === 'ABIERTO' ? 'Abierto' : 'Cerrado'}
                   </span>
                 </div>
                 <form className="mt-6 space-y-4" onSubmit={handleReservaSubmit}>
@@ -467,35 +461,45 @@ export default function ServiceDetailPage() {
                 </form>
               </div>
 
-              <div className="rounded-3xl border border-gray-100 p-6 space-y-3 shadow-sm">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Anfitrión</p>
-                <h4 className="text-lg font-semibold text-gray-900">{service.contact.host}</h4>
-                <p className="text-sm text-gray-500">Coordinador del servicio</p>
-                <button className="text-sm font-semibold text-brand-primary">Ver perfil</button>
-              </div>
+              {service.contact && (
+                <div className="rounded-3xl border border-gray-100 p-6 space-y-3 shadow-sm">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Anfitrión</p>
+                  <h4 className="text-lg font-semibold text-gray-900">{service.contact.host}</h4>
+                  <p className="text-sm text-gray-500">Coordinador del servicio</p>
+                  <button className="text-sm font-semibold text-brand-primary">Ver perfil</button>
+                </div>
+              )}
 
-              <div className="rounded-3xl border border-gray-100 p-6 space-y-4 shadow-sm">
-                <h4 className="font-semibold text-gray-900">Contacto rápido</h4>
-                <div className="space-y-3 text-sm text-gray-600">
-                  <p className="flex items-center gap-2">
-                    <FiPhone className="text-brand-primary" /> {service.contact.phone}
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <FiMail className="text-brand-primary" /> {service.contact.email}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {service.social.map((social) => {
-                      const Icon = socialIcons[social.icon] || FiInstagram;
-                      return (
-                        <span key={social.label} className="flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-gray-600 text-xs font-semibold">
-                          <Icon />
-                          {social.label}
-                        </span>
-                      );
-                    })}
+              {(service.contact || service.social) && (
+                <div className="rounded-3xl border border-gray-100 p-6 space-y-4 shadow-sm">
+                  <h4 className="font-semibold text-gray-900">Contacto rápido</h4>
+                  <div className="space-y-3 text-sm text-gray-600">
+                    {service.contact && (
+                      <>
+                        <p className="flex items-center gap-2">
+                          <FiPhone className="text-brand-primary" /> {service.contact.phone}
+                        </p>
+                        <p className="flex items-center gap-2">
+                          <FiMail className="text-brand-primary" /> {service.contact.email}
+                        </p>
+                      </>
+                    )}
+                    {service.social && (
+                      <div className="flex flex-wrap gap-2">
+                        {service.social.map((social) => {
+                          const Icon = socialIcons[social.icon] || FiInstagram;
+                          return (
+                            <span key={social.label} className="flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-gray-600 text-xs font-semibold">
+                              <Icon />
+                              {social.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
             </aside>
           </div>
         </section>
@@ -577,11 +581,7 @@ function AddReviewForm() {
                   className="focus:outline-none"
                   aria-label={`${criterion} ${value} estrellas`}
                 >
-                  <FiStar
-                    className={`text-xl transition ${
-                      active ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'
-                    }`}
-                  />
+                  <FiStar className={`text-xl transition ${active ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
                 </button>
               );
             })}
