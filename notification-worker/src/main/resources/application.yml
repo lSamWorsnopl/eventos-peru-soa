@@ -1,0 +1,31 @@
+﻿spring:
+  application:
+    name: notification-worker
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+app:
+  rabbit:
+    queue: ${NOTIFY_QUEUE:eventos.notifications.queue}
+    exchange: ${NOTIFY_EXCHANGE:eventos.notifications.exchange}
+    routing-key: ${NOTIFY_ROUTING_KEY:eventos.notifications.created}
+  mail:
+    from: ${MAIL_FROM:${MAIL_USERNAME}}
+    sender-name: ${MAIL_SENDER_NAME:Eventos Peru}
+    subject-prefix: ${MAIL_SUBJECT_PREFIX:Eventos Peru}
+logging:
+  level:
+    root: INFO
