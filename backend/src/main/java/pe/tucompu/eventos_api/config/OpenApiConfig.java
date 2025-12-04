@@ -12,7 +12,10 @@ import org.springframework.context.annotation.Configuration;
 @OpenAPIDefinition(
     info = @Info(title = "Eventos Peru API", version = "1.0"),
     security = { @SecurityRequirement(name = "bearerAuth") },
-    servers = { @Server(url = "/") }
+    servers = {
+        @Server(url = "http://localhost:8081", description = "Local"),
+        @Server(url = "/", description = "Relative (reverse proxy)")
+    }
 )
 @SecurityScheme(name = "bearerAuth", type = SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT")
 public class OpenApiConfig {

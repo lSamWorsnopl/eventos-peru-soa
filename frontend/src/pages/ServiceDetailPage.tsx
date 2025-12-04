@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
@@ -20,6 +20,7 @@ import {
   FiCheckCircle,
   FiClock,
 } from 'react-icons/fi';
+import type { IconType } from 'react-icons';
 import PublicNavbar from '../components/PublicNavbar';
 import type { ServiceData, ServiceSchedule } from '../types/service';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png?url';
@@ -29,6 +30,7 @@ import { useFavorites } from '../hooks/useFavorites';
 import { useAuth } from '../auth/AuthContext';
 import { useCart } from '../cart/CartContext';
 import { fetchService } from '../api/services';
+import api from '../api/client';
 
 const defaultMarker = L.icon({
   iconRetinaUrl: markerIcon2x,
@@ -41,29 +43,27 @@ const defaultMarker = L.icon({
 });
 
 const tabItems = [
-  { id: 'descripcion', label: 'Descripción' },
-  { id: 'galeria', label: 'Galería' },
-  { id: 'ubicacion', label: 'Ubicación' },
-  { id: 'opiniones', label: 'Añadir opinión' },
+  { id: 'descripcion', label: 'Descripcion' },
+  { id: 'galeria', label: 'Galeria' },
+  { id: 'ubicacion', label: 'Ubicacion' },
+  { id: 'opiniones', label: 'Anadir opinion' },
 ];
 
-const socialIcons = {
+const socialIcons: Record<string, IconType> = {
   facebook: FiFacebook,
   instagram: FiInstagram,
   whatsapp: FiMessageCircle,
   tiktok: FiInstagram,
 };
 
-const reviewCriteria = ['Servicio', 'Relación calidad-precio', 'Ubicación', 'Limpieza'];
-const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const reviewCriteria = ['Servicio', 'Relacion calidad-precio', 'Ubicacion', 'Limpieza'];
+const dayNames = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 
 function getTodaySchedule(schedule?: ServiceSchedule[]) {
   if (!schedule) return null;
   const today = dayNames[new Date().getDay()];
   return schedule.find((item) => item.day.toLowerCase() === today);
 }
-
-const formatDay = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 const createEmptyReservaForm = () => ({
   fechaEvento: '',
@@ -389,7 +389,7 @@ export default function ServiceDetailPage() {
                       <p className="text-sm text-gray-500">{service.reviews ?? 0} opiniones</p>
                     </div>
                   </div>
-                  <AddReviewForm />
+                  <AddReviewForm serviceId={service.id} />
                 </div>
               )}
 
@@ -667,7 +667,7 @@ function CalendarView({
         </button>
       </div>
       <div className="grid grid-cols-7 gap-2 text-center text-sm font-semibold text-gray-500">
-        {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
+        {['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'].map((day) => (
           <span key={day}>{day}</span>
         ))}
       </div>
@@ -710,19 +710,63 @@ function CalendarView({
   );
 }
 
-function AddReviewForm() {
+function AddReviewForm({ serviceId }: { serviceId: string }) {
+  const queryClient = useQueryClient();
   const [ratings, setRatings] = useState<Record<string, number>>(() =>
     reviewCriteria.reduce((acc, key) => ({ ...acc, [key]: 0 }), {}),
   );
+  const [nombre, setNombre] = useState('');
+  const [email, setEmail] = useState('');
+  const [comentario, setComentario] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const handleRating = (criterion: string, value: number) => {
     setRatings((prev) => ({ ...prev, [criterion]: value }));
+    setStatus('idle');
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    const valores = Object.values(ratings).filter((n) => n > 0);
+    const avg = valores.length ? Math.round(valores.reduce((a, b) => a + b, 0) / valores.length) : 0;
+    if (!avg || !comentario.trim() || !nombre.trim()) {
+      setStatus('error');
+      return;
+    }
+    setSubmitting(true);
+    setStatus('idle');
+    try {
+      await api.post(`/api/servicios/${serviceId}/opiniones`, {
+        rating: avg,
+        comentario: comentario.trim(),
+        nombre: nombre.trim(),
+        email: email.trim() || undefined,
+      });
+      setStatus('success');
+      setComentario('');
+      setNombre('');
+      setEmail('');
+      setRatings(reviewCriteria.reduce((acc, key) => ({ ...acc, [key]: 0 }), {}));
+      queryClient.invalidateQueries({ queryKey: ['servicio', serviceId] });
+    } catch (err) {
+      console.error(err);
+      setStatus('error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <form className="rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
-      <h3 className="text-xl font-semibold text-gray-900">Añadir opinión</h3>
-      <p className="text-sm text-gray-500">Tu correo no será publicado. Todos los campos marcados con * son obligatorios.</p>
+    <form className="rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4" onSubmit={handleSubmit}>
+      <h3 className="text-xl font-semibold text-gray-900">Anadir opinion</h3>
+      <p className="text-sm text-gray-500">Tu correo no sera publicado. Todos los campos marcados con * son obligatorios.</p>
       {reviewCriteria.map((criterion) => (
         <div key={criterion} className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
           <span className="w-48 font-semibold">{criterion} *</span>
@@ -748,16 +792,43 @@ function AddReviewForm() {
       <div className="grid sm:grid-cols-2 gap-4">
         <label className="text-sm font-semibold text-gray-700">
           Nombre *
-          <input type="text" className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-brand-primary/50 focus:outline-none" />
+          <input
+            type="text"
+            value={nombre}
+            onChange={(e) => {
+              setNombre(e.target.value);
+              setStatus('idle');
+            }}
+            required
+            className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-brand-primary/50 focus:outline-none"
+          />
         </label>
         <label className="text-sm font-semibold text-gray-700">
           Email *
-          <input type="email" className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-brand-primary/50 focus:outline-none" />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setStatus('idle');
+            }}
+            required
+            className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-brand-primary/50 focus:outline-none"
+          />
         </label>
       </div>
       <label className="text-sm font-semibold text-gray-700">
         Comentario *
-        <textarea rows={4} className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-brand-primary/50 focus:outline-none" />
+        <textarea
+          rows={4}
+          value={comentario}
+          onChange={(e) => {
+            setComentario(e.target.value);
+            setStatus('idle');
+          }}
+          required
+          className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-brand-primary/50 focus:outline-none"
+        />
       </label>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
         <label className="inline-flex items-center gap-2 text-gray-600">
@@ -766,12 +837,20 @@ function AddReviewForm() {
         </label>
         <label className="inline-flex items-center gap-2 text-gray-600">
           <input type="checkbox" className="rounded border-gray-300 text-brand-primary focus:ring-brand-primary" />
-          Guardar mi información para la próxima vez
+          Guardar mi informacion para la proxima vez
         </label>
       </div>
-      <button type="button" className="bg-brand-primary text-white rounded-xl px-6 py-3 font-semibold hover:-translate-y-0.5 hover:shadow-lg transition">
-        Enviar comentario
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="bg-brand-primary text-white rounded-xl px-6 py-3 font-semibold hover:-translate-y-0.5 hover:shadow-lg transition disabled:opacity-60"
+        >
+          {submitting ? 'Enviando...' : 'Enviar comentario'}
+        </button>
+        {status === 'success' && <span className="text-green-600 text-sm">Gracias por tu opinion.</span>}
+        {status === 'error' && <span className="text-red-600 text-sm">Completa los campos obligatorios.</span>}
+      </div>
     </form>
   );
 }

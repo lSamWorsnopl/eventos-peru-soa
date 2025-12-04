@@ -19,7 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.validation.Valid;
+import pe.tucompu.eventos_api.dto.OpinionRequest;
+import pe.tucompu.eventos_api.model.Opinion;
 import pe.tucompu.eventos_api.model.Servicio;
+import pe.tucompu.eventos_api.service.OpinionService;
 import pe.tucompu.eventos_api.service.ServicioService;
 
 @RestController
@@ -27,9 +30,11 @@ import pe.tucompu.eventos_api.service.ServicioService;
 public class ServicioController {
 
     private final ServicioService servicioService;
+    private final OpinionService opinionService;
 
-    public ServicioController(ServicioService servicioService) {
+    public ServicioController(ServicioService servicioService, OpinionService opinionService) {
         this.servicioService = servicioService;
+        this.opinionService = opinionService;
     }
 
     @GetMapping
@@ -46,6 +51,9 @@ public class ServicioController {
             todos = servicioService.listar();
         }
         todos = servicioService.applyDynamicStatus(todos);
+        if (!esAdmin(auth)) {
+            todos = todos.stream().filter(s -> !Boolean.TRUE.equals(s.getQualityBlocked())).toList();
+        }
         if (categoria == null || categoria.isBlank())
             return todos;
         String filtro = categoria.trim().toLowerCase();
@@ -62,6 +70,48 @@ public class ServicioController {
             return ResponseEntity.ok(servicioService.applyDynamicStatus(porId.get()));
         Optional<Servicio> porSlug = servicioService.obtenerPorSlug(idOrSlug);
         return porSlug.map(servicioService::applyDynamicStatus).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{idOrSlug}/opiniones")
+    public ResponseEntity<List<Opinion>> listarOpiniones(@PathVariable String idOrSlug) {
+        Optional<Servicio> servicioOpt = resolverServicio(idOrSlug);
+        return servicioOpt.map(s -> ResponseEntity.ok(opinionService.listarPorServicio(s.getId())))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{idOrSlug}/opiniones")
+    public ResponseEntity<Servicio> opinar(@PathVariable String idOrSlug,
+            @Valid @RequestBody OpinionRequest request,
+            Authentication auth) {
+        if (auth == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Optional<Servicio> servicioOpt = resolverServicio(idOrSlug);
+        if (servicioOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        opinionService.agregarOpinion(auth.getName(), servicioOpt.get().getId(), request);
+        return resolverServicio(idOrSlug)
+                .map(servicioService::applyDynamicStatus)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{idOrSlug}/bloquear-calidad")
+    public ResponseEntity<Servicio> bloquearPorCalidad(@PathVariable String idOrSlug,
+            @RequestParam(name = "motivo", required = false) String motivo,
+            Authentication auth) {
+        if (!esAdmin(auth)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        Optional<Servicio> servicioOpt = resolverServicio(idOrSlug);
+        if (servicioOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Optional<Servicio> bloqueado = opinionService.bloquearPorCalidad(servicioOpt.get().getId(), motivo);
+        return bloqueado.map(servicioService::applyDynamicStatus)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
@@ -136,5 +186,12 @@ public class ServicioController {
         return esProveedor(auth)
                 && servicio.getOwnerUserId() != null
                 && servicio.getOwnerUserId().equals(auth.getName());
+    }
+
+    private Optional<Servicio> resolverServicio(String idOrSlug) {
+        Optional<Servicio> porId = servicioService.obtener(idOrSlug);
+        if (porId.isPresent())
+            return porId;
+        return servicioService.obtenerPorSlug(idOrSlug);
     }
 }

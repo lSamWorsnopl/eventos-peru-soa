@@ -47,6 +47,12 @@ public class ServicioService {
         var ahora = LocalDateTime.now();
         servicio.setCreatedAt(ahora);
         servicio.setUpdatedAt(ahora);
+        if (servicio.getQualityBlocked() == null) {
+            servicio.setQualityBlocked(false);
+        }
+        if (servicio.getReviews() == null) {
+            servicio.setReviews(0);
+        }
         if (servicio.getOwnerUserId() != null && servicio.getOwnerUserId().isBlank()) {
             servicio.setOwnerUserId(null);
         }
@@ -127,6 +133,10 @@ public class ServicioService {
     public Servicio applyDynamicStatus(Servicio servicio) {
         if (servicio == null)
             return null;
+        if (Boolean.TRUE.equals(servicio.getQualityBlocked())) {
+            servicio.setStatus(Servicio.Estado.CERRADO);
+            return servicio;
+        }
         if (servicio.getStatusMode() != Servicio.StatusMode.AUTO)
             return servicio;
         boolean abierto = evaluarAuto(servicio);

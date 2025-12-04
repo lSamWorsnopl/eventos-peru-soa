@@ -44,6 +44,9 @@ public class Servicio {
     private Double priceFrom;
     private Double rating;
     private Integer reviews;
+    private Boolean qualityBlocked;
+    private String qualityBlockedReason;
+    private LocalDateTime qualityBlockedAt;
     private String description;
     private String summary;
     private List<String> services;
