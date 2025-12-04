@@ -1,0 +1,120 @@
+[
+  {
+    "slug": "bartender-pro",
+    "name": "BARTENDER PRO",
+    "subtitle": "Coctelería Móvil y Mixología Creativa",
+    "categories": ["Catering y bebidas"],
+    "tags": ["Destacado", "Tacna"],
+    "status": "ABIERTO",
+    "address": "Calle 2 de diciembre",
+    "city": "Tacna, Perú",
+    "priceFrom": 50,
+    "rating": 4.8,
+    "reviews": 18,
+    "description": "Bartender Pro es una empresa especializada en coctelería móvil para eventos sociales, corporativos y culturales. Combinamos técnica con show para ofrecer barras temáticas, coctelería molecular y experiencias líquidas memorables.",
+    "summary": "Ofrecemos barras clásicas, mixología molecular y experiencias personalizadas con bartenders uniformados y cristalería premium.",
+    "services": ["Barra clásica premium", "Mixología molecular", "Coctelería temática", "Menaje y cristalería incluida"],
+    "events": ["Bodas", "Cumpleaños", "Aniversarios", "Fiestas privadas", "Despedidas", "Eventos corporativos"],
+    "amenities": ["Personal uniformado", "Transporte", "Montaje", "Menaje premium"],
+    "schedule": [
+      { "day": "lunes", "open": "09:00", "close": "22:00" },
+      { "day": "martes", "open": "09:00", "close": "22:00" },
+      { "day": "miércoles", "open": "09:00", "close": "22:00" },
+      { "day": "jueves", "open": "09:00", "close": "22:00" },
+      { "day": "viernes", "open": "09:00", "close": "23:30" },
+      { "day": "sábado", "open": "10:00", "close": "02:00", "note": "Eventos nocturnos" },
+      { "day": "domingo", "open": "10:00", "close": "18:00", "note": "Reservas especiales" }
+    ],
+    "heroImage": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80",
+    "gallery": [
+      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1498654896293-37aacf113fd9?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1447078806655-40579c2520d6?auto=format&fit=crop&w=800&q=80"
+    ],
+    "coordinates": { "lat": -18.0066, "lng": -70.2463 },
+    "contact": { "phone": "+51 913 876 535", "email": "hola@bartenderpro.pe", "host": "Evie" },
+    "social": [
+      { "label": "Facebook", "icon": "facebook", "handle": "@bartenderpro" },
+      { "label": "WhatsApp", "icon": "whatsapp", "handle": "+51 913 876 535" },
+      { "label": "TikTok", "icon": "tiktok", "handle": "@bartenderpro" }
+    ]
+  },
+  {
+    "slug": "ritmo-pasion",
+    "name": "Academia Ritmo & Pasión",
+    "subtitle": "Shows coreográficos y animación",
+    "categories": ["Animación y entretenimiento"],
+    "tags": ["Servicios", "Cerrado"],
+    "status": "CERRADO",
+    "address": "Dirección amigable",
+    "city": "Arequipa, Perú",
+    "priceFrom": 25,
+    "rating": 4.6,
+    "reviews": 12,
+    "description": "Nuestro staff de bailarines profesionales crea shows dinámicos con vestuario temático, coreografías personalizadas y animación participativa.",
+    "summary": "Shows coreográficos personalizables para aperturas, vals y fiestas temáticas.",
+    "services": ["Vals personalizado", "Flashmob", "Animación interactiva", "Shows temáticos"],
+    "events": ["Bodas", "Quinceañeros", "Graduaciones", "Eventos corporativos"],
+    "amenities": ["Vestuario propio", "Coreógrafo", "Ensayos", "Transporte"],
+    "schedule": [
+      { "day": "lunes", "open": "10:00", "close": "21:00" },
+      { "day": "martes", "open": "10:00", "close": "21:00" },
+      { "day": "miércoles", "open": "10:00", "close": "21:00" },
+      { "day": "jueves", "open": "10:00", "close": "21:00" },
+      { "day": "viernes", "open": "10:00", "close": "22:00" },
+      { "day": "sábado", "open": "10:00", "close": "22:00" }
+    ],
+    "heroImage": "https://images.unsplash.com/photo-1496317899792-9d7dbcd928a1?auto=format&fit=crop&w=1200&q=80",
+    "gallery": [
+      "https://images.unsplash.com/photo-1496317899792-9d7dbcd928a1?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1464375117522-1311d6a5b81f?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1449057528837-7ca097b3520c?auto=format&fit=crop&w=800&q=80"
+    ],
+    "coordinates": { "lat": -16.409, "lng": -71.5375 },
+    "contact": { "phone": "+51 987 654 321", "email": "shows@ritmopasion.pe", "host": "Camila" },
+    "social": [
+      { "label": "Instagram", "icon": "instagram", "handle": "@ritmoypasion" },
+      { "label": "Facebook", "icon": "facebook", "handle": "/ritmopasion" }
+    ]
+  },
+  {
+    "slug": "lumen-studio",
+    "name": "Lumen Studio",
+    "subtitle": "Iluminación y ambientación integral",
+    "categories": ["Decoración y ambientación", "Tecnología y sonido"],
+    "tags": ["Destacado", "Lima"],
+    "status": "ABIERTO",
+    "address": "Av. El Sol 742",
+    "city": "Lima, Perú",
+    "priceFrom": 80,
+    "rating": 4.9,
+    "reviews": 24,
+    "description": "Diseñamos experiencias inmersivas con iluminación arquitectónica, mapping y sonido envolvente para cualquier tipo de evento.",
+    "summary": "Ambientaciones personalizadas con tecnología de punta.",
+    "services": ["Diseño lumínico", "Renting de equipos", "Operación técnica", "Mapping"],
+    "events": ["Bodas", "Festivales", "Eventos corporativos", "Lanzamientos"],
+    "amenities": ["Generadores propios", "Transporte", "Equipo técnico 24/7"],
+    "schedule": [
+      { "day": "lunes", "open": "09:00", "close": "19:00" },
+      { "day": "martes", "open": "09:00", "close": "19:00" },
+      { "day": "miércoles", "open": "09:00", "close": "19:00" },
+      { "day": "jueves", "open": "09:00", "close": "19:00" },
+      { "day": "viernes", "open": "09:00", "close": "19:00" },
+      { "day": "sábado", "open": "10:00", "close": "16:00" }
+    ],
+    "heroImage": "https://images.unsplash.com/photo-1470229538611-16ba8c7ffbd7?auto=format&fit=crop&w=1200&q=80",
+    "gallery": [
+      "https://images.unsplash.com/photo-1470229538611-16ba8c7ffbd7?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=800&q=80"
+    ],
+    "coordinates": { "lat": -12.0921, "lng": -77.0465 },
+    "contact": { "phone": "+51 912 345 678", "email": "hola@lumenstudio.pe", "host": "Diego" },
+    "social": [
+      { "label": "Instagram", "icon": "instagram", "handle": "@lumen.studio" },
+      { "label": "WhatsApp", "icon": "whatsapp", "handle": "+51 912 345 678" }
+    ]
+  }
+]

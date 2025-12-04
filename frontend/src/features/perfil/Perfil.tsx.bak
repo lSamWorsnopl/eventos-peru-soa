@@ -1,0 +1,141 @@
+﻿import { useState, useEffect } from 'react';
+import { useAuth } from '../../auth/AuthContext';
+import api from '../../api/client';
+
+export default function Perfil() {
+  const { user } = useAuth();
+  const [form, setForm] = useState<{ username: string; nombre?: string }>({ username: user?.username || '', nombre: '' });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' });
+  const [pwdMsg, setPwdMsg] = useState<string | null>(null);
+  const [pwdLocked, setPwdLocked] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        // Intentar /me primero; si falla usar /users/:id
+        let data;
+        try {
+          const r = await api.get('/api/users/me');
+          data = r.data;
+        } catch {
+          const r = await api.get(`/api/users/${user?.id}`);
+          data = r.data;
+        }
+        if (!cancelled) setForm({ username: data.username || user?.username, nombre: data.nombre || '' });
+      } catch (e) {
+        // noop
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [user?.id, user?.username]);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg(null);
+    if (!form.username.trim()) { setMsg('El username es obligatorio'); return; }
+    setSaving(true);
+    try {
+      await api.put(`/api/users/${user?.id}`, { username: form.username, nombre: form.nombre });
+      setMsg('Perfil actualizado');
+    } catch (e: any) {
+      setMsg(e?.response?.data?.message || 'No se pudo actualizar el perfil');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPwdMsg(null);
+    if (!pwd.current || !pwd.next) { setPwdMsg('Completa todos los campos'); return; }
+    if (pwd.next.length < 8) { setPwdMsg('La nueva contraseÃ±a debe tener al menos 8 caracteres'); return; }
+    if (pwd.next !== pwd.confirm) { setPwdMsg('Las contraseÃ±as no coinciden'); return; }
+    setSaving(true);
+    try {
+      // Intentar varios endpoints y detectar contraseÃ±a actual incorrecta (400/401)
+      const payload = { currentPassword: pwd.current, newPassword: pwd.next };
+      const attempts = [
+        () => api.post('/auth/change-password', payload),
+        () => api.put(`/api/users/${user?.id}/password`, payload),
+        () => api.patch('/api/users/me/password', payload),
+      ];
+      let lastError: any = null;
+      for (const run of attempts) {
+        try {
+          await run();
+          setPwd({ current: '', next: '', confirm: '' });
+          setPwdMsg('ContraseÃ±a actualizada');
+          setPwdLocked(false);
+          return;
+        } catch (err: any) {
+          lastError = err;
+          const status = err?.response?.status as number | undefined;
+          const msg = (err?.response?.data?.message || '').toString().toLowerCase();
+          if (status === 400 || status === 401 || msg.includes('actual') || msg.includes('current') || msg.includes('incorrect') || msg.includes('invÃ¡lid') || msg.includes('errÃ³nea')) {
+            setPwdMsg('ContraseÃ±a actual errÃ³nea');
+            setPwdLocked(true);
+            return; // no seguir intentando otros endpoints
+          }
+          // Otros errores: seguir intentando siguiente endpoint
+        }
+      }
+      // Si llegÃ³ aquÃ­, todos fallaron por otra razÃ³n
+      throw lastError;
+    } catch (e: any) {
+      setPwdMsg(e?.response?.data?.message || 'No se pudo cambiar la contraseÃ±a');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="max-w-xl space-y-4">
+      <h2 className="text-2xl font-semibold">Mi perfil</h2>
+      {loading ? (
+        <p>Cargandoâ€¦</p>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <form onSubmit={onSubmit} className="border rounded-xl p-4 bg-white space-y-3 shadow-sm">
+            <h3 className="font-semibold">Datos de perfil</h3>
+            <label className="block">
+              <span className="text-sm text-gray-700">Username</span>
+              <input className="mt-1 w-full border rounded p-2" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="text-sm text-gray-700">Nombre</span>
+              <input className="mt-1 w-full border rounded p-2" value={form.nombre || ''} onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+            </label>
+            {msg && <p className={`text-sm ${msg.includes('actualizado') ? 'text-green-700' : 'text-red-700'}`}>{msg}</p>}
+            <button disabled={saving} className="px-3 py-2 rounded bg-red-600 bg-brand-primary text-white">{saving ? 'Guardandoâ€¦' : 'Guardar cambios'}</button>
+          </form>
+
+          <form onSubmit={onChangePassword} className="border rounded-xl p-4 bg-white space-y-3 shadow-sm">
+            <h3 className="font-semibold">Cambiar contraseÃ±a</h3>
+            <label className="block">
+              <span className="text-sm text-gray-700">ContraseÃ±a actual</span>
+              <input className="mt-1 w-full border rounded p-2" type="password" value={pwd.current} onChange={(e) => { setPwd({ ...pwd, current: e.target.value }); setPwdLocked(false); setPwdMsg(null); }} />
+            </label>
+            <label className="block">
+              <span className="text-sm text-gray-700">Nueva contraseÃ±a</span>
+              <input className="mt-1 w-full border rounded p-2" type="password" value={pwd.next} onChange={(e) => setPwd({ ...pwd, next: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="text-sm text-gray-700">Confirmar nueva</span>
+              <input className="mt-1 w-full border rounded p-2" type="password" value={pwd.confirm} onChange={(e) => setPwd({ ...pwd, confirm: e.target.value })} />
+            </label>
+            {pwdMsg && <p className={`text-sm ${pwdMsg.includes('actualizada') || pwdMsg.includes('actualizado') ? 'text-green-700' : 'text-red-700'}`}>{pwdMsg}</p>}
+            <button disabled={saving || pwdLocked} className={`px-3 py-2 rounded text-white ${pwdLocked ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 bg-brand-primary hover:brightness-110'}`}>{saving ? 'Guardandoâ€¦' : 'Cambiar contraseÃ±a'}</button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
